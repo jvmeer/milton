@@ -12,6 +12,7 @@ import java.util.HashMap;
  */
 
 public class Chain {
+    String underlier;
     ZonedDateTime asOf;
     HashMap<ZonedDateTime, Link> chain = null;
     double spot;
