@@ -27,7 +27,10 @@ public class Main {
             exception.printStackTrace();
         }
 
-        receiveResponse(session);
+        ArrayList<String> tickers = new ArrayList<>();
+        receiveResponse(session, tickers);
+
+        System.out.println(tickers.toString());
 
         ZonedDateTime test = stringToDate("20170321");
         System.out.println(test.toString());
@@ -79,7 +82,7 @@ public class Main {
         return ZonedDateTime.parse(date + " " + EXPIRY_TIME + " " + TIME_ZONE, formatter);
     }
 
-    private static void receiveResponse(Session session) {
+    private static void receiveResponse(Session session, ArrayList<String> tickers) {
         boolean continueToLoop = true;
         while (continueToLoop) {
             Event event = null;
@@ -94,7 +97,7 @@ public class Main {
                 case Event.EventType.Constants.RESPONSE: //final event
                     continueToLoop = false; //fall through
                 case Event.EventType.Constants.PARTIAL_RESPONSE:
-                    handleResponse(event);
+                    handleResponse(event, tickers);
                     break;
                 default:
                     break;
@@ -102,7 +105,21 @@ public class Main {
         }
     }
 
-    private static void handleResponse(Event event) {
+    private static void handleResponse(Event event, ArrayList<String> tickers) {
+        MessageIterator iter = event.messageIterator();
+        while (iter.hasNext()) {
+            Message message = iter.next();
+            Element responseData = message.getElement("securityData").getValueAsElement();
+            Element responseTickers = responseData.getElement("fieldData").getElement("OPT_CHAIN");
+            for (int i = 0; i < responseTickers.numValues(); ++i) {
+                Element responseTicker = responseTickers.getValueAsElement(i);
+                System.out.println(responseTicker.toString());
+                tickers.add(responseTicker.getElement("Security Description").getValueAsString());
+            }
+        }
+    }
+
+    private static void printResponse(Event event) {
         MessageIterator iter = event.messageIterator();
         while (iter.hasNext()) {
             System.out.println(iter.next().toString());
