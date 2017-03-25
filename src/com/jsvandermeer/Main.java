@@ -44,6 +44,8 @@ public class Main {
         HashMap<String, Chain.Market> markets = new HashMap<>();
         receiveResponse(session, null, markets);
 
+        System.out.println(markets.toString());
+
         Chain chain = new Chain();
         System.out.println("Hello world!");
     }
@@ -138,7 +140,6 @@ public class Main {
             Element responseTickers = responseData.getElement("fieldData").getElement("OPT_CHAIN");
             for (int i = 0; i < responseTickers.numValues(); ++i) {
                 Element responseTicker = responseTickers.getValueAsElement(i);
-                System.out.println(responseTicker.toString());
                 tickers.add(responseTicker.getElement("Security Description").getValueAsString());
             }
         }
@@ -146,8 +147,24 @@ public class Main {
 
     private static void handleMarketResponse(Event event, HashMap<String, Chain.Market> markets) {
         MessageIterator iter = event.messageIterator();
+        int counter = 1;
         while (iter.hasNext()) {
             Message message = iter.next();
+            Element responseData = message.getElement("securityData");
+            String ticker = responseData.getElement("security").getValueAsString();
+            if (ticker.equals("BBG00F90Q524 Index")) {
+                System.out.println("Hey There");
+            }
+            Element prices = responseData.getElement("fieldData").getValueAsElement();
+            double bidPrice;
+            try {
+                bidPrice = prices.getElement("PX_BID").getValueAsFloat64();
+            } catch (NotFoundException exception) {
+                bidPrice = 0;
+            }
+            double askPrice = prices.getElement("PX_ASK").getValueAsFloat64();
+            markets.put(ticker, new Chain.Market(bidPrice, askPrice));
+            System.out.println(counter++);
             System.out.println(message.toString());
         }
     }

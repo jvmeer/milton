@@ -22,13 +22,17 @@ public class Chain {
         HashMap<String, Market> strip;
     }
 
-    public class Market {
-        double bidPrice;
-        double askPrice;
+    public static class Market {
+        final double bidPrice;
+        final double askPrice;
 //        long bidSize;
 //        long askSize;
-    }
 
+        public Market(double bidPrice, double askPrice) {
+            this.bidPrice = bidPrice;
+            this.askPrice = askPrice;
+        }
+    }
 
     public void setAsOf(ZonedDateTime asOf) {
         this.asOf = asOf;
