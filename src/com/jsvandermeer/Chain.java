@@ -22,11 +22,11 @@ public class Chain {
         HashMap<String, Market> strip;
     }
 
-    private class Market {
+    public class Market {
         double bidPrice;
         double askPrice;
-        long bidSize;
-        long askSize;
+//        long bidSize;
+//        long askSize;
     }
 
 

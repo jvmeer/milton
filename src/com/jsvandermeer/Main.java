@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.HashMap;
 
 public class Main {
 
@@ -28,13 +29,20 @@ public class Main {
         }
 
         ArrayList<String> tickers = new ArrayList<>();
-        receiveResponse(session, tickers);
+        receiveResponse(session, tickers, null);
 
         System.out.println(tickers.toString());
 
-        ZonedDateTime test = stringToDate("20170321");
-        System.out.println(test.toString());
+        request = createMarketRequest(service, tickers, stringToDate("20170103"));
 
+        try {
+            session.sendRequest(request, new CorrelationID(correlationIDCounter++));
+        } catch (IOException exception) {
+            exception.printStackTrace();
+        }
+
+        HashMap<String, Chain.Market> markets = new HashMap<>();
+        receiveResponse(session, null, markets);
 
         Chain chain = new Chain();
         System.out.println("Hello world!");
@@ -70,6 +78,19 @@ public class Main {
         return request;
     }
 
+    private static Request createMarketRequest(Service service, ArrayList<String> tickers, ZonedDateTime asOf) {
+        Request request = service.createRequest("HistoricalDataRequest");
+        tickers.forEach((ticker) -> {
+            request.getElement("securities").appendValue(ticker);
+        });
+        Element fields = request.getElement("fields");
+        fields.appendValue("PX_BID");
+        fields.appendValue("PX_ASK");
+        request.set("startDate", dateToString(asOf));
+        request.set("endDate", dateToString(asOf));
+        return request;
+    }
+
     private static String dateToString(ZonedDateTime date) {
         int year = date.getYear();
         int month = date.getMonthValue();
@@ -82,7 +103,7 @@ public class Main {
         return ZonedDateTime.parse(date + " " + EXPIRY_TIME + " " + TIME_ZONE, formatter);
     }
 
-    private static void receiveResponse(Session session, ArrayList<String> tickers) {
+    private static void receiveResponse(Session session, ArrayList<String> tickers, HashMap<String, Chain.Market> markets) {
         boolean continueToLoop = true;
         while (continueToLoop) {
             Event event = null;
@@ -97,7 +118,11 @@ public class Main {
                 case Event.EventType.Constants.RESPONSE: //final event
                     continueToLoop = false; //fall through
                 case Event.EventType.Constants.PARTIAL_RESPONSE:
-                    handleResponse(event, tickers);
+                    if (markets == null) {
+                        handleChainResponse(event, tickers);
+                    } else {
+                        handleMarketResponse(event, markets);
+                    }
                     break;
                 default:
                     break;
@@ -105,7 +130,7 @@ public class Main {
         }
     }
 
-    private static void handleResponse(Event event, ArrayList<String> tickers) {
+    private static void handleChainResponse(Event event, ArrayList<String> tickers) {
         MessageIterator iter = event.messageIterator();
         while (iter.hasNext()) {
             Message message = iter.next();
@@ -118,6 +143,17 @@ public class Main {
             }
         }
     }
+
+    private static void handleMarketResponse(Event event, HashMap<String, Chain.Market> markets) {
+        MessageIterator iter = event.messageIterator();
+        while (iter.hasNext()) {
+            Message message = iter.next();
+            System.out.println(message.toString());
+        }
+    }
+
+
+
 
     private static void printResponse(Event event) {
         MessageIterator iter = event.messageIterator();
