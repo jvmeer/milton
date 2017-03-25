@@ -32,6 +32,11 @@ public class Chain {
             this.bidPrice = bidPrice;
             this.askPrice = askPrice;
         }
+
+        @Override
+        public String toString() {
+            return "(" + bidPrice + "," + askPrice + ")";
+        }
     }
 
     public void setAsOf(ZonedDateTime asOf) {

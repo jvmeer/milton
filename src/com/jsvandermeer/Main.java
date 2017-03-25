@@ -18,6 +18,8 @@ public class Main {
     private static final String EXPIRY_TIME = "131500";
     private static final String TIME_ZONE = "America/Chicago";
 
+    private enum ResponseType {CHAIN, IDENTIFICATION, MARKET}
+
     public static void main(String[] args) {
         Session session = createSession();
         Service service = session.getService("//blp/refdata");
@@ -28,8 +30,20 @@ public class Main {
             exception.printStackTrace();
         }
 
+        ArrayList<String> rawTickers = new ArrayList<>();
+        receiveResponse(session, rawTickers, null, ResponseType.CHAIN);
+
+        System.out.println(rawTickers.toString());
+
+        request = createIdentificationRequest(service, rawTickers);
+        try {
+            session.sendRequest(request, new CorrelationID(correlationIDCounter++));
+        } catch (IOException exception) {
+            exception.printStackTrace();
+        }
+
         ArrayList<String> tickers = new ArrayList<>();
-        receiveResponse(session, tickers, null);
+        receiveResponse(session, tickers, null, ResponseType.IDENTIFICATION);
 
         System.out.println(tickers.toString());
 
@@ -42,7 +56,7 @@ public class Main {
         }
 
         HashMap<String, Chain.Market> markets = new HashMap<>();
-        receiveResponse(session, null, markets);
+        receiveResponse(session, null, markets, ResponseType.MARKET);
 
         System.out.println(markets.toString());
 
@@ -76,7 +90,19 @@ public class Main {
         Element asOfOverride = request.getElement("overrides").appendElement();
         asOfOverride.setElement("fieldId","SINGLE_DATE_OVERRIDE");
         asOfOverride.setElement("value", dateToString(asOf));
+        Element identifierOverride = request.getElement("overrides").appendElement();
+        identifierOverride.setElement("fieldId", "DISPLAY_ID_BB_GLOBAL_OVERRIDE");
+        identifierOverride.setElement("value", "False");
 
+        return request;
+    }
+
+    private static Request createIdentificationRequest(Service service, ArrayList<String> tickers) {
+        Request request = service.createRequest("ReferenceDataRequest");
+        tickers.forEach((ticker) -> {
+            request.getElement("securities").appendValue(ticker);
+        });
+        request.getElement("fields").appendValue("SECURITY_DES");
         return request;
     }
 
@@ -105,7 +131,7 @@ public class Main {
         return ZonedDateTime.parse(date + " " + EXPIRY_TIME + " " + TIME_ZONE, formatter);
     }
 
-    private static void receiveResponse(Session session, ArrayList<String> tickers, HashMap<String, Chain.Market> markets) {
+    private static void receiveResponse(Session session, ArrayList<String> tickers, HashMap<String, Chain.Market> markets, ResponseType responseType) {
         boolean continueToLoop = true;
         while (continueToLoop) {
             Event event = null;
@@ -114,16 +140,20 @@ public class Main {
             } catch (InterruptedException exception) {
                 exception.printStackTrace();
             }
-            System.out.println(event.toString());
-            System.out.println(event.eventType().toString());
             switch (event.eventType().intValue()) {
                 case Event.EventType.Constants.RESPONSE: //final event
                     continueToLoop = false; //fall through
                 case Event.EventType.Constants.PARTIAL_RESPONSE:
-                    if (markets == null) {
-                        handleChainResponse(event, tickers);
-                    } else {
-                        handleMarketResponse(event, markets);
+                    switch (responseType) {
+                        case CHAIN:
+                            handleChainResponse(event, tickers);
+                            break;
+                        case IDENTIFICATION:
+                            handleIdentificationResponse(event, tickers);
+                            break;
+                        case MARKET:
+                            handleMarketResponse(event, markets);
+                            break;
                     }
                     break;
                 default:
@@ -145,6 +175,17 @@ public class Main {
         }
     }
 
+    private static void handleIdentificationResponse(Event event, ArrayList<String> tickers) {
+        MessageIterator iter = event.messageIterator();
+        while (iter.hasNext()) {
+            Message message = iter.next();
+            Element securityData = message.getElement("securityData");
+            for (int i = 0; i < securityData.numValues(); ++i) {
+                tickers.add(securityData.getValueAsElement(i).getElement("fieldData").getElement("SECURITY_DES").getValueAsString() + " Index");
+            }
+        }
+    }
+
     private static void handleMarketResponse(Event event, HashMap<String, Chain.Market> markets) {
         MessageIterator iter = event.messageIterator();
         int counter = 1;
@@ -152,20 +193,20 @@ public class Main {
             Message message = iter.next();
             Element responseData = message.getElement("securityData");
             String ticker = responseData.getElement("security").getValueAsString();
-            if (ticker.equals("BBG00F90Q524 Index")) {
-                System.out.println("Hey There");
-            }
-            Element prices = responseData.getElement("fieldData").getValueAsElement();
+            Element fieldData = responseData.getElement("fieldData").getValueAsElement();
             double bidPrice;
             try {
-                bidPrice = prices.getElement("PX_BID").getValueAsFloat64();
+                bidPrice = fieldData.getElement("PX_BID").getValueAsFloat64();
             } catch (NotFoundException exception) {
                 bidPrice = 0;
             }
-            double askPrice = prices.getElement("PX_ASK").getValueAsFloat64();
+            double askPrice;
+            try {
+                askPrice = fieldData.getElement("PX_ASK").getValueAsFloat64();
+            } catch (NotFoundException exception) {
+                askPrice = bidPrice;
+            }
             markets.put(ticker, new Chain.Market(bidPrice, askPrice));
-            System.out.println(counter++);
-            System.out.println(message.toString());
         }
     }
 
