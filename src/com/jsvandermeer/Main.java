@@ -8,6 +8,8 @@ import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 public class Main {
 
@@ -15,7 +17,7 @@ public class Main {
 
 
 
-    private enum ResponseType {CHAIN, IDENTIFICATION, MARKET}
+    private enum RequestType {CHAIN, IDENTIFICATION, MARKET, FORWARD}
 
     public static void main(String[] args) {
         Session session = createSession();
@@ -28,7 +30,7 @@ public class Main {
         }
 
         ArrayList<String> rawTickers = new ArrayList<>();
-        receiveResponse(session, rawTickers, null, ResponseType.CHAIN);
+        receiveResponse(session, rawTickers, null, RequestType.CHAIN);
 
         System.out.println(rawTickers.toString());
 
@@ -40,7 +42,7 @@ public class Main {
         }
 
         ArrayList<String> tickers = new ArrayList<>();
-        receiveResponse(session, tickers, null, ResponseType.IDENTIFICATION);
+        receiveResponse(session, tickers, null, RequestType.IDENTIFICATION);
 
         System.out.println(tickers.toString());
 
@@ -53,12 +55,17 @@ public class Main {
         }
 
         HashMap<String, Chain.Market> markets = new HashMap<>();
-        receiveResponse(session, null, markets, ResponseType.MARKET);
+        receiveResponse(session, null, markets, RequestType.MARKET);
 
         System.out.println(markets.toString());
 
         Chain chain = null;
         System.out.println("Hello world!");
+    }
+
+
+    private static void executeRequest(Session session, Service service, List<String> tickers, Map<String, Chain.Market> markets, Map<ZonedDateTime, Double> forwards, RequestType requestType, String underlier) {
+
     }
 
     private static Session createSession() {
@@ -121,7 +128,7 @@ public class Main {
 
 
 
-    private static void receiveResponse(Session session, ArrayList<String> tickers, HashMap<String, Chain.Market> markets, ResponseType responseType) {
+    private static void receiveResponse(Session session, ArrayList<String> tickers, HashMap<String, Chain.Market> markets, RequestType requestType) {
         boolean continueToLoop = true;
         while (continueToLoop) {
             Event event = null;
@@ -134,7 +141,7 @@ public class Main {
                 case Event.EventType.Constants.RESPONSE: //final event
                     continueToLoop = false; //fall through
                 case Event.EventType.Constants.PARTIAL_RESPONSE:
-                    switch (responseType) {
+                    switch (requestType) {
                         case CHAIN:
                             handleChainResponse(event, tickers);
                             break;

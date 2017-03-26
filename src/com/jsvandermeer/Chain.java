@@ -30,7 +30,7 @@ public class Chain {
         markets.forEach((ticker, market) -> {
             ZonedDateTime expiry = Utils.expiryFromTicker(ticker);
             expiries.add(expiry);
-            if chain.containsKey(expiry) {
+            if (chain.containsKey(expiry)) {
                 chain.get(expiry).strip.put(ticker, market);
             } else {
                 chain.put(expiry, new Link(forwards.get(expiry), ticker, market));
