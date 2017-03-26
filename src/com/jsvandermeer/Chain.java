@@ -6,6 +6,9 @@ import com.bloomberglp.blpapi.MessageIterator;
 
 import java.time.ZonedDateTime;
 import java.util.HashMap;
+import java.util.Map;
+import java.util.SortedSet;
+import java.util.TreeSet;
 
 /**
  * Created by Jacob on 3/18/2017.
@@ -14,12 +17,37 @@ import java.util.HashMap;
 public class Chain {
     String underlier;
     ZonedDateTime asOf;
-    HashMap<ZonedDateTime, Link> chain = null;
+    Map<ZonedDateTime, Link> chain;
+    private SortedSet<ZonedDateTime> expiries;
     double spot;
 
+    public Chain(String underlier, ZonedDateTime asOf, Map<ZonedDateTime, Double> forwards, Map<String, Market> markets) {
+        this.underlier = underlier;
+        this.asOf = asOf;
+        chain = new HashMap<>();
+        expiries = new TreeSet<>();
+        spot = forwards.get(asOf);
+        markets.forEach((ticker, market) -> {
+            ZonedDateTime expiry = Utils.expiryFromTicker(ticker);
+            expiries.add(expiry);
+            if chain.containsKey(expiry) {
+                chain.get(expiry).strip.put(ticker, market);
+            } else {
+                chain.put(expiry, new Link(forwards.get(expiry), ticker, market));
+            }
+        });
+    }
+
+
+
     private class Link {
-        double forward;
-        HashMap<String, Market> strip;
+        private double forward;
+        Map<String, Market> strip;
+        public Link(double forward, String ticker, Market market) {
+            this.forward = forward;
+            strip = new HashMap<>();
+            strip.put(ticker, market);
+        }
     }
 
     public static class Market {
@@ -39,14 +67,6 @@ public class Chain {
         }
     }
 
-    public void setAsOf(ZonedDateTime asOf) {
-        this.asOf = asOf;
-    }
 
-    public void setSymbols(MessageIterator iter) {
-        while (iter.hasNext()) {
-            Message message = iter.next();
-        }
-    }
 
 }

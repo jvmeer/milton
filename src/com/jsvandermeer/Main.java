@@ -13,17 +13,14 @@ public class Main {
 
     private static int correlationIDCounter = 1;
 
-    static final String VIX_TICKER = "VIX Index";
-    static final String SPX_TICKER = "SPX Index";
-    private static final String EXPIRY_TIME = "131500";
-    private static final String TIME_ZONE = "America/Chicago";
+
 
     private enum ResponseType {CHAIN, IDENTIFICATION, MARKET}
 
     public static void main(String[] args) {
         Session session = createSession();
         Service service = session.getService("//blp/refdata");
-        Request request = createChainRequest(service, SPX_TICKER, stringToDate("20170103"));
+        Request request = createChainRequest(service, Utils.SPX_TICKER, Utils.stringToDate("20170103"));
         try {
             session.sendRequest(request, new CorrelationID(correlationIDCounter++));
         } catch (IOException exception) {
@@ -47,7 +44,7 @@ public class Main {
 
         System.out.println(tickers.toString());
 
-        request = createMarketRequest(service, tickers, stringToDate("20170103"));
+        request = createMarketRequest(service, tickers, Utils.stringToDate("20170103"));
 
         try {
             session.sendRequest(request, new CorrelationID(correlationIDCounter++));
@@ -60,7 +57,7 @@ public class Main {
 
         System.out.println(markets.toString());
 
-        Chain chain = new Chain();
+        Chain chain = null;
         System.out.println("Hello world!");
     }
 
@@ -89,10 +86,13 @@ public class Main {
         request.getElement("fields").appendValue("OPT_CHAIN");
         Element asOfOverride = request.getElement("overrides").appendElement();
         asOfOverride.setElement("fieldId","SINGLE_DATE_OVERRIDE");
-        asOfOverride.setElement("value", dateToString(asOf));
+        asOfOverride.setElement("value", Utils.dateToString(asOf));
         Element identifierOverride = request.getElement("overrides").appendElement();
         identifierOverride.setElement("fieldId", "DISPLAY_ID_BB_GLOBAL_OVERRIDE");
         identifierOverride.setElement("value", "False");
+        Element chainOverride = request.getElement("overrides").appendElement();
+        chainOverride.setElement("fieldId", "OPTION_CHAIN_OVERRIDE");
+        chainOverride.setElement("value", "A");
 
         return request;
     }
@@ -114,22 +114,12 @@ public class Main {
         Element fields = request.getElement("fields");
         fields.appendValue("PX_BID");
         fields.appendValue("PX_ASK");
-        request.set("startDate", dateToString(asOf));
-        request.set("endDate", dateToString(asOf));
+        request.set("startDate", Utils.dateToString(asOf));
+        request.set("endDate", Utils.dateToString(asOf));
         return request;
     }
 
-    private static String dateToString(ZonedDateTime date) {
-        int year = date.getYear();
-        int month = date.getMonthValue();
-        int day = date.getDayOfMonth();
-        return year + (month < 10 ? "0" : "") + month + (day < 10 ? "0" : "") + day;
-    }
 
-    private static ZonedDateTime stringToDate(String date) {
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("uuuuMMdd HHmmss VV");
-        return ZonedDateTime.parse(date + " " + EXPIRY_TIME + " " + TIME_ZONE, formatter);
-    }
 
     private static void receiveResponse(Session session, ArrayList<String> tickers, HashMap<String, Chain.Market> markets, ResponseType responseType) {
         boolean continueToLoop = true;
