@@ -4,11 +4,10 @@ package com.jsvandermeer;
 import com.bloomberglp.blpapi.Message;
 import com.bloomberglp.blpapi.MessageIterator;
 
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.time.ZonedDateTime;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.SortedSet;
-import java.util.TreeSet;
+import java.util.*;
 
 /**
  * Created by Jacob on 3/18/2017.
@@ -21,39 +20,73 @@ public class Strip {
     double forward;
     SortedSet<Option> options;
 
-    public Strip(String underlier, ZonedDateTime asOf, Map<ZonedDateTime, Double> forwards, Map<String, Market> markets) {
+    public Strip(String underlier, ZonedDateTime asOf, ZonedDateTime expiry, double forward, ResultSet resultSet) {
         this.underlier = underlier;
         this.asOf = asOf;
-        chain = new HashMap<>();
-        expiries = new TreeSet<>();
-        spot = forwards.get(asOf);
-        markets.forEach((ticker, market) -> {
-            ZonedDateTime expiry = Utils.expiryFromTicker(ticker);
-            expiries.add(expiry);
-            if (chain.containsKey(expiry)) {
-                chain.get(expiry).strip.put(ticker, market);
-            } else {
-                chain.put(expiry, new Link(forwards.get(expiry), ticker, market));
+        this.expiry = expiry;
+        this.forward = forward;
+        options = new TreeSet<>();
+        try {
+            while (resultSet.next()) {
+                String identifier = resultSet.getString("identifier");
+                String strike = resultSet.getString("strike");
+                Utils.OptionType optionType = null;
+                switch (resultSet.getString("optionType")) {
+                    case "P":
+                        optionType = Utils.OptionType.PUT;
+                    case "C":
+                        optionType = Utils.OptionType.CALL;
+                }
+                double bidPrice = resultSet.getDouble("bidPrice");
+                double askPrice = resultSet.getDouble("askPrice");
+                long bidSize = resultSet.getLong("bidSize");
+                long askSize = resultSet.getLong("askSize");
+
+                options.add(new Option(identifier, strike, optionType, new Market(bidPrice, askPrice, bidSize, askSize)));
             }
-        });
-    }
-
-
-
-    private class Link {
-        private double forward;
-        Map<String, Market> strip;
-        public Link(double forward, String ticker, Market market) {
-            this.forward = forward;
-            strip = new HashMap<>();
-            strip.put(ticker, market);
+        } catch (SQLException exception) {
+            exception.printStackTrace();
         }
     }
 
+    private static class Option implements Comparable<Option> {
+        final String identifier;
+        final String strike;
+        final Utils.OptionType optionType;
+        final Market market;
 
-    private static class Option {
-        String identifier;
-        Market market;
+        public Option(String identifier, String strike, Utils.OptionType optionType, Market market) {
+            this.identifier = identifier;
+            this.strike = strike;
+            this.optionType = optionType;
+            this.market = market;
+        }
+
+        @Override public boolean equals(Object other) {
+            Option otherOption = (Option) other;
+            return identifier.equals(otherOption.identifier);
+        }
+
+        @Override public int hashCode() {
+            return identifier.hashCode();
+        }
+
+        @Override public int compareTo(Option other) {
+            if (strike.equals(other.strike)) {
+                if (optionType.equals(other.optionType)) {
+                    return 0;
+                } else if (optionType.equals(Utils.OptionType.PUT)) {
+                    return -1;
+                } else {
+                    return 1;
+                }
+            } else if (Double.parseDouble(strike) < Double.parseDouble(other.strike)) {
+                return -1;
+            } else {
+                return 1;
+            }
+        }
+
     }
 
     public static class Market {

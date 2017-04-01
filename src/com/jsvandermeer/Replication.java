@@ -42,8 +42,19 @@ public class Replication implements Comparable<Replication> {
     }
 
     @Override public int compareTo(Replication other) {
-        if (spxFrontDate.isBefore(other.spxFrontDate)) return -1;
-        return spxFrontDate.equals(other.spxFrontDate) ? 0 : 1;
+        if (spxFrontDate.isBefore(other.spxFrontDate)) {
+            return -1;
+        } else if (spxFrontDate.equals(other.spxFrontDate)) {
+            if (spxBackDate.isBefore(other.spxBackDate)) {
+                return -1;
+            } else if (spxBackDate.equals(other.spxBackDate)) {
+                return 0;
+            } else {
+                return 1;
+            }
+        } else {
+            return 1;
+        }
     }
 
 
