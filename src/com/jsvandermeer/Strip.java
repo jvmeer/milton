@@ -14,14 +14,14 @@ import java.util.TreeSet;
  * Created by Jacob on 3/18/2017.
  */
 
-public class Chain {
+public class Strip {
     String underlier;
     ZonedDateTime asOf;
-    Map<ZonedDateTime, Link> chain;
-    private SortedSet<ZonedDateTime> expiries;
-    double spot;
+    ZonedDateTime expiry;
+    double forward;
+    SortedSet<Option> options;
 
-    public Chain(String underlier, ZonedDateTime asOf, Map<ZonedDateTime, Double> forwards, Map<String, Market> markets) {
+    public Strip(String underlier, ZonedDateTime asOf, Map<ZonedDateTime, Double> forwards, Map<String, Market> markets) {
         this.underlier = underlier;
         this.asOf = asOf;
         chain = new HashMap<>();
@@ -50,20 +50,28 @@ public class Chain {
         }
     }
 
+
+    private static class Option {
+        String identifier;
+        Market market;
+    }
+
     public static class Market {
         final double bidPrice;
         final double askPrice;
-//        long bidSize;
-//        long askSize;
+        final long bidSize;
+        final long askSize;
 
-        public Market(double bidPrice, double askPrice) {
+        public Market(double bidPrice, double askPrice, long bidSize, long askSize) {
             this.bidPrice = bidPrice;
             this.askPrice = askPrice;
+            this.bidSize = bidSize;
+            this.askSize = askSize;
         }
 
         @Override
         public String toString() {
-            return "(" + bidPrice + "," + askPrice + ")";
+            return "(" + bidPrice + " " + bidSize + "," + askPrice + " " + askSize + ")";
         }
     }
 

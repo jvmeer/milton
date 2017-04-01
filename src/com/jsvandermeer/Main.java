@@ -5,7 +5,6 @@ import com.bloomberglp.blpapi.*;
 
 import java.io.IOException;
 import java.time.ZonedDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -17,55 +16,93 @@ public class Main {
 
 
 
-    private enum RequestType {CHAIN, IDENTIFICATION, MARKET, FORWARD}
+    private enum ConversationType {CHAIN, IDENTIFICATION, MARKET, FORWARD}
 
     public static void main(String[] args) {
         Session session = createSession();
         Service service = session.getService("//blp/refdata");
-        Request request = createChainRequest(service, Utils.SPX_TICKER, Utils.stringToDate("20170103"));
-        try {
-            session.sendRequest(request, new CorrelationID(correlationIDCounter++));
-        } catch (IOException exception) {
-            exception.printStackTrace();
+        ZonedDateTime asOf = Utils.stringToDate("20170103");
+
+
+
+        String[] underliers = {Utils.SPX_TICKER, Utils.VIX_TICKER};
+
+        Map<String, Strip> chains = new HashMap<>();
+
+
+
+        for (String underlier : underliers) {
+
+            List<String> rawTickers = new ArrayList<>();
+            executeConversation(session, service, asOf, ConversationType.CHAIN, underlier, rawTickers, null,
+                    null, null);
+
+            System.out.println(rawTickers.toString());
+
+            List<String> tickers = new ArrayList<>();
+            executeConversation(session, service, asOf, ConversationType.IDENTIFICATION, underlier, rawTickers,
+                    tickers,null, null);
+
+            System.out.println(tickers.toString());
+
+            Map<String, Strip.Market> markets = new HashMap<>();
+            executeConversation(session, service, asOf, ConversationType.MARKET, underlier, null,
+                    tickers, markets, null);
+
+            System.out.println(markets.toString());
+
+            Map<ZonedDateTime, Double> forwards = new HashMap<>();
+            executeConversation(session, service, asOf, ConversationType.FORWARD, underlier, null,
+                    null, null, forwards);
+
+            chains.put(underlier, new Strip(underlier, asOf, forwards, markets));
         }
 
-        ArrayList<String> rawTickers = new ArrayList<>();
-        receiveResponse(session, rawTickers, null, RequestType.CHAIN);
 
-        System.out.println(rawTickers.toString());
 
-        request = createIdentificationRequest(service, rawTickers);
-        try {
-            session.sendRequest(request, new CorrelationID(correlationIDCounter++));
-        } catch (IOException exception) {
-            exception.printStackTrace();
-        }
 
-        ArrayList<String> tickers = new ArrayList<>();
-        receiveResponse(session, tickers, null, RequestType.IDENTIFICATION);
-
-        System.out.println(tickers.toString());
-
-        request = createMarketRequest(service, tickers, Utils.stringToDate("20170103"));
-
-        try {
-            session.sendRequest(request, new CorrelationID(correlationIDCounter++));
-        } catch (IOException exception) {
-            exception.printStackTrace();
-        }
-
-        HashMap<String, Chain.Market> markets = new HashMap<>();
-        receiveResponse(session, null, markets, RequestType.MARKET);
-
-        System.out.println(markets.toString());
-
-        Chain chain = null;
-        System.out.println("Hello world!");
     }
 
 
-    private static void executeRequest(Session session, Service service, List<String> tickers, Map<String, Chain.Market> markets, Map<ZonedDateTime, Double> forwards, RequestType requestType, String underlier) {
+    private static void executeConversation(Session session, Service service, ZonedDateTime asOf,
+                                       ConversationType conversationType, String underlier, List<String> rawTickers,
+                                       List<String> tickers, Map<String, Strip.Market> markets,
+                                       Map<ZonedDateTime, Double> forwards) {
+        Request request = null;
+        switch (conversationType) {
+            case CHAIN:
+                request = createChainRequest(service, underlier, asOf);
+                break;
+            case IDENTIFICATION:
+                request = createIdentificationRequest(service, rawTickers);
+                break;
+            case MARKET:
+                request = createMarketRequest(service, tickers, asOf);
+                break;
+            case FORWARD:
+                request = createForwardRequest(service, underlier, asOf);
+                break;
+        }
+        try {
+            session.sendRequest(request, new CorrelationID(correlationIDCounter++));
+        } catch (IOException exception) {
+            exception.printStackTrace();
+        }
 
+        switch (conversationType) {
+            case CHAIN:
+                receiveResponse(session, rawTickers, null, null, conversationType);
+                break;
+            case IDENTIFICATION:
+                receiveResponse(session, tickers, null,null, conversationType);
+                break;
+            case MARKET:
+                receiveResponse(session, null, markets, null, conversationType);
+                break;
+            case FORWARD:
+                receiveResponse(session, null, null, forwards, conversationType);
+                break;
+        }
     }
 
     private static Session createSession() {
@@ -104,7 +141,7 @@ public class Main {
         return request;
     }
 
-    private static Request createIdentificationRequest(Service service, ArrayList<String> tickers) {
+    private static Request createIdentificationRequest(Service service, List<String> tickers) {
         Request request = service.createRequest("ReferenceDataRequest");
         tickers.forEach((ticker) -> {
             request.getElement("securities").appendValue(ticker);
@@ -113,7 +150,7 @@ public class Main {
         return request;
     }
 
-    private static Request createMarketRequest(Service service, ArrayList<String> tickers, ZonedDateTime asOf) {
+    private static Request createMarketRequest(Service service, List<String> tickers, ZonedDateTime asOf) {
         Request request = service.createRequest("HistoricalDataRequest");
         tickers.forEach((ticker) -> {
             request.getElement("securities").appendValue(ticker);
@@ -126,9 +163,23 @@ public class Main {
         return request;
     }
 
+    private static Request createForwardRequest(Service service, String underlier, ZonedDateTime asOf) {
+        Request request = service.createRequest("ReferenceDataRequest");
+        request.getElement("securities").appendValue(underlier);
+        request.getElement("fields").appendValue("IMP_FORWARD_PRICE");
+        Element asOfOverride = request.getElement("overrides").appendElement();
+        asOfOverride.setElement("fieldId","REFERENCE_DATE");
+        asOfOverride.setElement("value",Utils.dateToString(asOf));
+        Element axisOverride = request.getElement("overrides").appendElement();
+        axisOverride.setElement("fieldId", "IVOL_SURFACE_AXIS_TYPE");
+        axisOverride.setElement("value", "Listed/Pct");
+        return request;
+    }
 
 
-    private static void receiveResponse(Session session, ArrayList<String> tickers, HashMap<String, Chain.Market> markets, RequestType requestType) {
+
+    private static void receiveResponse(Session session, List<String> tickers, Map<String, Strip.Market> markets,
+                                        Map<ZonedDateTime, Double> forwards, ConversationType conversationType) {
         boolean continueToLoop = true;
         while (continueToLoop) {
             Event event = null;
@@ -141,7 +192,7 @@ public class Main {
                 case Event.EventType.Constants.RESPONSE: //final event
                     continueToLoop = false; //fall through
                 case Event.EventType.Constants.PARTIAL_RESPONSE:
-                    switch (requestType) {
+                    switch (conversationType) {
                         case CHAIN:
                             handleChainResponse(event, tickers);
                             break;
@@ -159,20 +210,21 @@ public class Main {
         }
     }
 
-    private static void handleChainResponse(Event event, ArrayList<String> tickers) {
+    private static void handleChainResponse(Event event, List<String> tickers) {
         MessageIterator iter = event.messageIterator();
         while (iter.hasNext()) {
             Message message = iter.next();
-            Element responseData = message.getElement("securityData").getValueAsElement();
-            Element responseTickers = responseData.getElement("fieldData").getElement("OPT_CHAIN");
-            for (int i = 0; i < responseTickers.numValues(); ++i) {
-                Element responseTicker = responseTickers.getValueAsElement(i);
-                tickers.add(responseTicker.getElement("Security Description").getValueAsString());
-            }
+            System.out.println(message.toString());
+//            Element responseData = message.getElement("securityData").getValueAsElement();
+//            Element responseTickers = responseData.getElement("fieldData").getElement("OPT_CHAIN");
+//            for (int i = 0; i < responseTickers.numValues(); ++i) {
+//                Element responseTicker = responseTickers.getValueAsElement(i);
+//                tickers.add(responseTicker.getElement("Security Description").getValueAsString());
+//            }
         }
     }
 
-    private static void handleIdentificationResponse(Event event, ArrayList<String> tickers) {
+    private static void handleIdentificationResponse(Event event, List<String> tickers) {
         MessageIterator iter = event.messageIterator();
         while (iter.hasNext()) {
             Message message = iter.next();
@@ -183,31 +235,37 @@ public class Main {
         }
     }
 
-    private static void handleMarketResponse(Event event, HashMap<String, Chain.Market> markets) {
+    private static void handleMarketResponse(Event event, Map<String, Strip.Market> markets) {
         MessageIterator iter = event.messageIterator();
-        int counter = 1;
         while (iter.hasNext()) {
             Message message = iter.next();
-            Element responseData = message.getElement("securityData");
-            String ticker = responseData.getElement("security").getValueAsString();
-            Element fieldData = responseData.getElement("fieldData").getValueAsElement();
-            double bidPrice;
-            try {
-                bidPrice = fieldData.getElement("PX_BID").getValueAsFloat64();
-            } catch (NotFoundException exception) {
-                bidPrice = 0;
-            }
-            double askPrice;
-            try {
-                askPrice = fieldData.getElement("PX_ASK").getValueAsFloat64();
-            } catch (NotFoundException exception) {
-                askPrice = bidPrice;
-            }
-            markets.put(ticker, new Chain.Market(bidPrice, askPrice));
+            System.out.println(message.toString());
+//            Element responseData = message.getElement("securityData");
+//            String ticker = responseData.getElement("security").getValueAsString();
+//            Element fieldData = responseData.getElement("fieldData").getValueAsElement();
+//            double bidPrice;
+//            try {
+//                bidPrice = fieldData.getElement("PX_BID").getValueAsFloat64();
+//            } catch (NotFoundException exception) {
+//                bidPrice = 0;
+//            }
+//            double askPrice;
+//            try {
+//                askPrice = fieldData.getElement("PX_ASK").getValueAsFloat64();
+//            } catch (NotFoundException exception) {
+//                askPrice = bidPrice;
+//            }
+//            markets.put(ticker, new Strip.Market(bidPrice, askPrice));
         }
     }
 
-
+    private static void handleForwardResponse(Event event, Map<ZonedDateTime, Double> forwards) {
+        MessageIterator iter = event.messageIterator();
+        while (iter.hasNext()) {
+            Message message = iter.next();
+            System.out.println(message.toString());
+        }
+    }
 
 
     private static void printResponse(Event event) {
