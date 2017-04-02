@@ -3,6 +3,10 @@ package com.jsvandermeer;
 import com.bloomberglp.blpapi.*;
 
 import java.io.IOException;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -17,12 +21,12 @@ public class Bloomberg {
     private static int correlationIDCounter = 1;
     private enum ConversationType {CHAIN, IDENTIFICATION, MARKET, FORWARD}
 
-    public static void loadOptions(ZonedDateTime startDate, ZonedDateTime endDate) {
+    private static final String[] underliers = {Utils.SPX_TICKER, Utils.VIX_TICKER};
+
+    static void loadOptions(ZonedDateTime startDate, ZonedDateTime endDate) {
         Session session = createSession();
         Service service = session.getService("//blp/refdata");
         ZonedDateTime asOf = Utils.stringToDate("20170103");
-
-        String[] underliers = {Utils.SPX_TICKER, Utils.VIX_TICKER};
 
         Map<String, Strip> chains = new HashMap<>();
 
@@ -56,7 +60,52 @@ public class Bloomberg {
         }
     }
 
+    static void loadForwards(ZonedDateTime startDate, ZonedDateTime endDate, String databasePath) {
+        Session session = createSession();
+        Service service = session.getService("//blp/refdata");
+        ZonedDateTime asOf = Utils.stringToDate("20170103");
 
+        String newDatabasePath = "jdbc:sqlite:C:\\Users\\Jacob\\Dropbox\\Code\\milton\\history"
+                + ZonedDateTime.now().toString() + ".db";
+        Connection connection = null;
+        try {
+            if (databasePath == null) {
+                connection = DriverManager.getConnection(newDatabasePath);
+            } else {
+                connection = DriverManager.getConnection(databasePath);
+            }
+            connection.createStatement().executeQuery("create table if not exists spx_forwards (expiry text," +
+                    "as_of text, forward real, primary key (expiry, as_of))");
+        } catch (SQLException exception) {
+            exception.printStackTrace();
+        }
+
+
+        String insertStatement = "insert into spx_forwards(expiry, as_of, forward) values(?, ?, ?)";
+        String underlier = Utils.SPX_TICKER;
+        Map<ZonedDateTime, Double> forwards = new HashMap<>();
+        executeConversation(session, service, asOf, ConversationType.FORWARD, underlier, null,
+                null, null, forwards);
+        for (Map.Entry<ZonedDateTime, Double> entry : forwards.entrySet()) {
+            try {
+                PreparedStatement preparedStatement = connection.prepareStatement(insertStatement);
+                preparedStatement.setString(1, Utils.dateToString(entry.getKey()));
+                preparedStatement.setString(2, Utils.dateToString(asOf));
+                preparedStatement.setDouble(3, entry.getValue());
+            } catch (SQLException exception) {
+                exception.printStackTrace();
+            }
+        }
+
+
+
+
+    }
+
+
+    private static void insertSpxForward(ZonedDateTime expiry, ZonedDateTime asOf, double forward) {
+
+    }
 
     private static void executeConversation(Session session, Service service, ZonedDateTime asOf,
                                             ConversationType conversationType, String underlier, List<String> rawTickers,
@@ -198,6 +247,8 @@ public class Bloomberg {
                         case MARKET:
                             handleMarketResponse(event, markets);
                             break;
+                        case FORWARD:
+                            handleForwardResponse(event, forwards);
                     }
                     break;
                 default:

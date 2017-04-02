@@ -23,7 +23,7 @@ public class History {
         }
     }
 
-    public void test() {
+    void test() {
         Statement statement = null;
         ResultSet resultSet = null;
         try {
