@@ -56,7 +56,7 @@ public class Bloomberg {
             executeConversation(session, service, asOf, ConversationType.FORWARD, underlier, null,
                     null, null, forwards);
 
-//            chains.put(underlier, new Strip(underlier, asOf, forwards, markets));
+//            chains.put(underlier, new Strip(underlier, asOf, forwardsData, markets));
         }
     }
 
@@ -74,7 +74,7 @@ public class Bloomberg {
             } else {
                 connection = DriverManager.getConnection(databasePath);
             }
-            connection.createStatement().executeQuery("create table if not exists spx_forwards (expiry text," +
+            connection.createStatement().execute("create table if not exists spx_forwards (expiry text," +
                     "as_of text, forward real, primary key (expiry, as_of))");
         } catch (SQLException exception) {
             exception.printStackTrace();
@@ -92,6 +92,7 @@ public class Bloomberg {
                 preparedStatement.setString(1, Utils.dateToString(entry.getKey()));
                 preparedStatement.setString(2, Utils.dateToString(asOf));
                 preparedStatement.setDouble(3, entry.getValue());
+                preparedStatement.executeUpdate();
             } catch (SQLException exception) {
                 exception.printStackTrace();
             }
@@ -110,7 +111,7 @@ public class Bloomberg {
     private static void executeConversation(Session session, Service service, ZonedDateTime asOf,
                                             ConversationType conversationType, String underlier, List<String> rawTickers,
                                             List<String> tickers, Map<String, Strip.Market> markets,
-                                            Map<ZonedDateTime, Double> forwards) {
+                                            Map<ZonedDateTime, Double> forwardsData) {
         Request request = null;
         switch (conversationType) {
             case CHAIN:
@@ -143,7 +144,7 @@ public class Bloomberg {
                 receiveResponse(session, null, markets, null, conversationType);
                 break;
             case FORWARD:
-                receiveResponse(session, null, null, forwards, conversationType);
+                receiveResponse(session, null, null, forwardsData, conversationType);
                 break;
         }
     }
@@ -224,7 +225,7 @@ public class Bloomberg {
 
 
     private static void receiveResponse(Session session, List<String> tickers, Map<String, Strip.Market> markets,
-                                        Map<ZonedDateTime, Double> forwards, ConversationType conversationType) {
+                                        Map<ZonedDateTime, Double> forwardsData, ConversationType conversationType) {
         boolean continueToLoop = true;
         while (continueToLoop) {
             Event event = null;
@@ -248,7 +249,7 @@ public class Bloomberg {
                             handleMarketResponse(event, markets);
                             break;
                         case FORWARD:
-                            handleForwardResponse(event, forwards);
+                            handleForwardResponse(event, forwardsData);
                     }
                     break;
                 default:
@@ -322,6 +323,15 @@ public class Bloomberg {
         MessageIterator iter = event.messageIterator();
         while (iter.hasNext()) {
             Message message = iter.next();
+            Element responseData = message.getElement("securityData").getValueAsElement();
+            Element forwardsData = responseData.getElement("fieldData").getElement("IMP_FORWARD_PRICE");
+            double spot = 0.0;
+            for (int i = 0; i < forwardsData.numValues(); ++i) {
+                Element forward = forwardsData.getValueAsElement(i);
+                if (i == 0) spot = forward.getElement("Implied Forward Price").getValueAsFloat64();
+                forwards.put(Utils.stringToDate(forward.getElementAsString("Expiration Date")),
+                        forward.getElementAsFloat64("Implied Forward Price"));
+            }
             System.out.println(message.toString());
         }
     }

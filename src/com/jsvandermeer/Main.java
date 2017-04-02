@@ -20,8 +20,11 @@ public class Main {
         ZonedDateTime startDate = Utils.stringToDate("20170103");
         ZonedDateTime endDate = Utils.stringToDate("20170103");
 
-        History history = new History(startDate, endDate, "jdbc:sqlite:C:\\Users\\Jacob\\Dropbox\\Code\\milton\\history.db");
-        history.test();
+        Bloomberg.loadForwards(Utils.stringToDate("20170103"), Utils.stringToDate("20170103"),
+                "jdbc:sqlite:C:\\Users\\Jacob\\Dropbox\\Code\\milton\\history.db");
+
+//        History history = new History(startDate, endDate, "jdbc:sqlite:C:\\Users\\Jacob\\Dropbox\\Code\\milton\\history.db");
+//        history.test();
 
 
     }
