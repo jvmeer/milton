@@ -1,6 +1,7 @@
 package com.jsvandermeer;
 
 import com.bloomberglp.blpapi.*;
+import org.sqlite.SQLiteException;
 
 import java.io.IOException;
 import java.sql.Connection;
@@ -19,7 +20,7 @@ import java.util.Map;
 public class Bloomberg {
 
     private static int correlationIDCounter = 1;
-    private enum ConversationType {CHAIN, IDENTIFICATION, MARKET, FORWARD}
+    private enum ConversationType {CHAIN, IDENTIFICATION, OPTION_MARKET, FORWARD, FUTURE, FUTURE_MARKET}
 
     private static final String[] underliers = {Utils.SPX_TICKER, Utils.VIX_TICKER};
 
@@ -47,7 +48,7 @@ public class Bloomberg {
             System.out.println(tickers.toString());
 
             Map<String, Strip.Market> markets = new HashMap<>();
-            executeConversation(session, service, asOf, ConversationType.MARKET, underlier, null,
+            executeConversation(session, service, asOf, ConversationType.OPTION_MARKET, underlier, null,
                     tickers, markets, null);
 
             System.out.println(markets.toString());
@@ -60,10 +61,9 @@ public class Bloomberg {
         }
     }
 
-    static void loadForwards(ZonedDateTime startDate, ZonedDateTime endDate, String databasePath) {
+    static void loadSpxForwards(ZonedDateTime startDate, ZonedDateTime endDate, String databasePath) {
         Session session = createSession();
         Service service = session.getService("//blp/refdata");
-        ZonedDateTime asOf = Utils.stringToDate("20170103");
 
         String newDatabasePath = "jdbc:sqlite:C:\\Users\\Jacob\\Dropbox\\Code\\milton\\history"
                 + ZonedDateTime.now().toString() + ".db";
@@ -83,30 +83,30 @@ public class Bloomberg {
 
         String insertStatement = "insert into spx_forwards(expiry, as_of, forward) values(?, ?, ?)";
         String underlier = Utils.SPX_TICKER;
-        Map<ZonedDateTime, Double> forwards = new HashMap<>();
-        executeConversation(session, service, asOf, ConversationType.FORWARD, underlier, null,
-                null, null, forwards);
-        for (Map.Entry<ZonedDateTime, Double> entry : forwards.entrySet()) {
-            try {
-                PreparedStatement preparedStatement = connection.prepareStatement(insertStatement);
-                preparedStatement.setString(1, Utils.dateToString(entry.getKey()));
-                preparedStatement.setString(2, Utils.dateToString(asOf));
-                preparedStatement.setDouble(3, entry.getValue());
-                preparedStatement.executeUpdate();
-            } catch (SQLException exception) {
-                exception.printStackTrace();
+
+        for (ZonedDateTime dateCursor = startDate; dateCursor.isBefore(endDate); dateCursor = dateCursor.plusDays(1)) {
+
+
+            Map<ZonedDateTime, Double> forwards = new HashMap<>();
+            executeConversation(session, service, dateCursor, ConversationType.FORWARD, underlier, null,
+                    null, null, forwards);
+            for (Map.Entry<ZonedDateTime, Double> entry : forwards.entrySet()) {
+                try {
+                    PreparedStatement preparedStatement = connection.prepareStatement(insertStatement);
+                    preparedStatement.setString(1, Utils.dateToString(entry.getKey()));
+                    preparedStatement.setString(2, Utils.dateToString(dateCursor));
+                    preparedStatement.setDouble(3, entry.getValue());
+                    preparedStatement.executeUpdate();
+                } catch (SQLException exception) {
+                    exception.printStackTrace();
+                }
             }
         }
-
-
-
-
     }
 
 
-    private static void insertSpxForward(ZonedDateTime expiry, ZonedDateTime asOf, double forward) {
 
-    }
+
 
     private static void executeConversation(Session session, Service service, ZonedDateTime asOf,
                                             ConversationType conversationType, String underlier, List<String> rawTickers,
@@ -120,7 +120,7 @@ public class Bloomberg {
             case IDENTIFICATION:
                 request = createIdentificationRequest(service, rawTickers);
                 break;
-            case MARKET:
+            case OPTION_MARKET:
                 request = createMarketRequest(service, tickers, asOf);
                 break;
             case FORWARD:
@@ -140,7 +140,7 @@ public class Bloomberg {
             case IDENTIFICATION:
                 receiveResponse(session, tickers, null,null, conversationType);
                 break;
-            case MARKET:
+            case OPTION_MARKET:
                 receiveResponse(session, null, markets, null, conversationType);
                 break;
             case FORWARD:
@@ -245,7 +245,7 @@ public class Bloomberg {
                         case IDENTIFICATION:
                             handleIdentificationResponse(event, tickers);
                             break;
-                        case MARKET:
+                        case OPTION_MARKET:
                             handleMarketResponse(event, markets);
                             break;
                         case FORWARD:
