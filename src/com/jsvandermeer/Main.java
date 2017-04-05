@@ -20,9 +20,11 @@ public class Main {
         ZonedDateTime startDate = Utils.stringToDate("20170103");
         ZonedDateTime endDate = Utils.stringToDate("20170103");
 
-        Bloomberg.loadSpxForwards(Utils.stringToDate("20170103"), Utils.stringToDate("20170106"),
-                "jdbc:sqlite:C:\\Users\\Jacob\\Dropbox\\Code\\milton\\history.db");
+//        Bloomberg.loadSpxForwards(Utils.stringToDate("20170103"), Utils.stringToDate("20170106"),
+//                "jdbc:sqlite:C:\\Users\\Jacob\\Dropbox\\Code\\milton\\history.db");
 
+
+        Livevol livevol = new Livevol();
 //        History history = new History(startDate, endDate, "jdbc:sqlite:C:\\Users\\Jacob\\Dropbox\\Code\\milton\\history.db");
 //        history.test();
 
