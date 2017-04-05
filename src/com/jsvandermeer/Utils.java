@@ -9,6 +9,8 @@ import java.time.format.DateTimeFormatter;
  */
 public class Utils {
 
+    static final String DATABASE_PATH = "jdbc:sqlite:C:\\Users\\Jacob\\Dropbox\\Code\\milton\\history.db";
+
     public static final String VIX_TICKER = "VIX Index";
     public static final String SPX_TICKER = "SPX Index";
     public static final String EXPIRY_TIME = "131500";
