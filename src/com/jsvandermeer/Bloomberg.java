@@ -1,7 +1,6 @@
 package com.jsvandermeer;
 
 import com.bloomberglp.blpapi.*;
-import org.sqlite.SQLiteException;
 
 import java.io.IOException;
 import java.sql.Connection;
@@ -29,7 +28,7 @@ public class Bloomberg {
         Service service = session.getService("//blp/refdata");
         ZonedDateTime asOf = Utils.stringToDate("20170103");
 
-        Map<String, Strip> chains = new HashMap<>();
+        Map<String, OptionChain> chains = new HashMap<>();
 
 
 
@@ -47,7 +46,7 @@ public class Bloomberg {
 
             System.out.println(tickers.toString());
 
-            Map<String, Strip.Market> markets = new HashMap<>();
+            Map<String, OptionChain.Market> markets = new HashMap<>();
             executeConversation(session, service, asOf, ConversationType.OPTION_MARKET, underlier, null,
                     tickers, markets, null);
 
@@ -57,7 +56,7 @@ public class Bloomberg {
             executeConversation(session, service, asOf, ConversationType.FORWARD, underlier, null,
                     null, null, forwards);
 
-//            chains.put(underlier, new Strip(underlier, asOf, forwardsData, markets));
+//            chains.put(underlier, new OptionChain(underlier, asOf, forwardsData, markets));
         }
     }
 
@@ -110,7 +109,7 @@ public class Bloomberg {
 
     private static void executeConversation(Session session, Service service, ZonedDateTime asOf,
                                             ConversationType conversationType, String underlier, List<String> rawTickers,
-                                            List<String> tickers, Map<String, Strip.Market> markets,
+                                            List<String> tickers, Map<String, OptionChain.Market> markets,
                                             Map<ZonedDateTime, Double> forwardsData) {
         Request request = null;
         switch (conversationType) {
@@ -224,7 +223,7 @@ public class Bloomberg {
 
 
 
-    private static void receiveResponse(Session session, List<String> tickers, Map<String, Strip.Market> markets,
+    private static void receiveResponse(Session session, List<String> tickers, Map<String, OptionChain.Market> markets,
                                         Map<ZonedDateTime, Double> forwardsData, ConversationType conversationType) {
         boolean continueToLoop = true;
         while (continueToLoop) {
@@ -283,7 +282,7 @@ public class Bloomberg {
         }
     }
 
-    private static void handleMarketResponse(Event event, Map<String, Strip.Market> markets) {
+    private static void handleMarketResponse(Event event, Map<String, OptionChain.Market> markets) {
         MessageIterator iter = event.messageIterator();
         while (iter.hasNext()) {
             Message message = iter.next();
@@ -315,7 +314,7 @@ public class Bloomberg {
             } catch (NotFoundException exception) {
                 askSize = 0;
             }
-            markets.put(ticker, new Strip.Market(bidPrice, askPrice, bidSize, askSize));
+            markets.put(ticker, new OptionChain.Market(bidPrice, askPrice, bidSize, askSize));
         }
     }
 

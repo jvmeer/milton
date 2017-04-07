@@ -34,6 +34,12 @@ public class Backtester {
         } catch (SQLException exception) {
             exception.printStackTrace();
         }
+        for (ZonedDateTime asOf : asOfs) {
+            List<>
+            String vixFuturesStatement = "select * from vix_futures where as_of=" + Utils.dateToString(asOf);
+            String spxForwardsStatement = "select * from spx_forwards where as_of=" + Utils.dateToString(asOf);
+            String optionsStatement = "select * from options where as_of=" + Utils.dateToString(asOf);
+        }
     }
 
 
