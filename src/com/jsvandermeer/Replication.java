@@ -3,51 +3,77 @@ package com.jsvandermeer;
 import java.time.ZonedDateTime;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.SortedSet;
 
 /**
  * Created by Jacob on 3/26/2017.
  */
 public class Replication implements Comparable<Replication> {
-    ZonedDateTime vixDate;
-    ZonedDateTime spxFrontDate;
-    ZonedDateTime spxBackDate;
-    Map<ZonedDateTime, Double> spxPrices;
-    Map<ZonedDateTime, Double> vixPrices;
+    String futureUnderlier;
+    String forwardUnderlier;
+    ZonedDateTime asOf;
+    SortedSet<ZonedDateTime> futureExpiries;
+    ZonedDateTime frontExpiry;
+    ZonedDateTime backExpiry;
+    SortedSet<OptionChain.Strip> futureStrips;
+    OptionChain.Strip frontStrip;
+    OptionChain.Strip backStrip;
+    Map<ZonedDateTime, Chain.Market> futures;
+    double frontForward;
+    double backForward;
 
-    public Replication(ZonedDateTime vixDate, ZonedDateTime spxFrontDate, ZonedDateTime spxBackDate) {
-        this.vixDate = vixDate;
-        this.spxFrontDate = spxFrontDate;
-        this.spxBackDate = spxBackDate;
-        spxPrices = new HashMap<>();
-        vixPrices = new HashMap<>();
+    Replication(String futureUnderlier, String forwardUnderlier, ZonedDateTime asOf,
+                SortedSet<ZonedDateTime> futureExpiries, ZonedDateTime frontExpiry, ZonedDateTime backExpiry,
+                SortedSet<OptionChain.Strip> futureStrips, OptionChain.Strip frontStrip, OptionChain.Strip backStrip,
+                Map<ZonedDateTime, Chain.Market> futures, double frontForward, double backForward) {
+        this.futureUnderlier = futureUnderlier;
+        this.forwardUnderlier = forwardUnderlier;
+        this.asOf = asOf;
+        this.futureExpiries = futureExpiries;
+        this.frontExpiry = frontExpiry;
+        this.backExpiry = backExpiry;
+        this.futureStrips = futureStrips;
+        this.frontStrip = frontStrip;
+        this.backStrip = backStrip;
+        this.futures = futures;
+        this.frontForward = frontForward;
+        this.backForward = backForward;
     }
 
-    public void addSpxPrice(ZonedDateTime asOf, double price) {
-        spxPrices.put(asOf, price);
+    double futureStrikeBid() {
+        return 0.0;
     }
 
-    public void addVixPrice(ZonedDateTime asOf, double price) {
-        vixPrices.put(asOf, price);
+    double futureStrikeMide() {
+        return 0.0;
+    }
+
+    double futureStrikeAsk() {
+        return 0.0;
+    }
+
+    double forwardStrikeMid() {
+        return 0.0;
     }
 
     @Override public boolean equals(Object other) {
         if (!(other instanceof Replication)) return false;
         Replication otherReplication = (Replication) other;
-        return (vixDate.equals(otherReplication.vixDate) && spxFrontDate.equals(otherReplication.spxFrontDate) &&
-                spxBackDate.equals(otherReplication.spxBackDate));
+        return (frontExpiry.equals(otherReplication.frontExpiry) &&
+                backExpiry.equals(otherReplication.backExpiry));
     }
 
     @Override public int hashCode() {
-        return vixDate.hashCode() * spxFrontDate.hashCode() * spxBackDate.hashCode();
+        return frontExpiry.hashCode() * backExpiry.hashCode();
     }
 
     @Override public int compareTo(Replication other) {
-        if (spxFrontDate.isBefore(other.spxFrontDate)) {
+        if (frontExpiry.isBefore(other.frontExpiry)) {
             return -1;
-        } else if (spxFrontDate.equals(other.spxFrontDate)) {
-            if (spxBackDate.isBefore(other.spxBackDate)) {
+        } else if (frontExpiry.equals(other.frontExpiry)) {
+            if (backExpiry.isBefore(other.backExpiry)) {
                 return -1;
-            } else if (spxBackDate.equals(other.spxBackDate)) {
+            } else if (backExpiry.equals(other.backExpiry)) {
                 return 0;
             } else {
                 return 1;
@@ -56,6 +82,4 @@ public class Replication implements Comparable<Replication> {
             return 1;
         }
     }
-
-
 }
