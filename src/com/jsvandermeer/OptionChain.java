@@ -18,20 +18,14 @@ class OptionChain extends Chain {
     Map<ZonedDateTime, Strip> strips;
 
     OptionChain(String underlier, ZonedDateTime asOf, Connection connection) {
-        this.underlier = underlier;
-        this.asOf = asOf;
-        expiries = new TreeSet<>();
+        super(underlier, asOf, connection, "options");
         strips = new HashMap<>();
 
         try {
-            String expiriesQuery = "select distinct expiry from (select * from options where as_of=" + asOf.toString();
-            ResultSet expiriesSet = connection.createStatement().executeQuery(expiriesQuery);
-            while (expiriesSet.next()) {
-                expiries.add(Utils.stringToDate(expiriesSet.getString("expiry")));
-            }
             for (ZonedDateTime expiry : expiries) {
                 String stripQuery = "select strike, is_call, bid_price, ask_price, bid_size, ask_size from options " +
-                        "where as_of=" + asOf.toString() + " and expiry=" + expiry.toString();
+                        "where underlier=" + underlier + " and as_of=" + asOf.toString() + " and expiry=" +
+                        expiry.toString();
                 ResultSet stripSet = connection.createStatement().executeQuery(stripQuery);
                 Strip strip = new Strip(expiry, stripSet);
                 strips.put(expiry, strip);
