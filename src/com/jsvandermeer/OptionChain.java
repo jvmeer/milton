@@ -10,6 +10,8 @@ import java.sql.SQLException;
 import java.time.ZonedDateTime;
 import java.util.*;
 
+import static com.jsvandermeer.Utils.dateToString;
+
 /**
  * Created by Jacob on 3/18/2017.
  */
@@ -24,8 +26,8 @@ class OptionChain extends Chain {
         try {
             for (ZonedDateTime expiry : expiries) {
                 String stripQuery = "select strike, is_call, bid_price, ask_price, bid_size, ask_size from options " +
-                        "where underlier=" + underlier + " and as_of=" + asOf.toString() + " and expiry=" +
-                        expiry.toString();
+                        "where underlier=" + underlier + " and as_of=" + dateToString(asOf) + " and expiry=" +
+                        dateToString(expiry);
                 ResultSet stripSet = connection.createStatement().executeQuery(stripQuery);
                 Strip strip = new Strip(expiry, stripSet);
                 strips.put(expiry, strip);

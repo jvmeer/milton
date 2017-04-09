@@ -17,15 +17,11 @@ public class Utils {
     public static final String TIME_ZONE = "America/Chicago";
 
     public static String dateToString(ZonedDateTime date) {
-        int year = date.getYear();
-        int month = date.getMonthValue();
-        int day = date.getDayOfMonth();
-        return year + (month < 10 ? "0" : "") + month + (day < 10 ? "0" : "") + day;
+        return date.format(DateTimeFormatter.ISO_OFFSET_DATE_TIME);
     }
 
     public static ZonedDateTime stringToDate(String date) {
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("uuuuMMdd HHmmss VV");
-        return ZonedDateTime.parse(date + " " + EXPIRY_TIME + " " + TIME_ZONE, formatter);
+        return ZonedDateTime.parse(date, DateTimeFormatter.ISO_OFFSET_DATE_TIME);
     }
 
     public static ZonedDateTime expiryFromTicker(String ticker) {

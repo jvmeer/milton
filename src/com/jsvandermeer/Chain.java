@@ -7,6 +7,8 @@ import java.time.ZonedDateTime;
 import java.util.SortedSet;
 import java.util.TreeSet;
 
+import static com.jsvandermeer.Utils.dateToString;
+
 
 /**
  * Created by Jacob on 4/6/2017.
@@ -23,7 +25,7 @@ abstract class Chain {
         expiries = new TreeSet<>();
         try {
             String expiriesQuery = "select distinct expiry from (select * from " + table + " where underlier=" +
-                    underlier + " and as_of=" + asOf.toString();
+                    underlier + " and as_of=" + dateToString(asOf);
             ResultSet expiriesSet = connection.createStatement().executeQuery(expiriesQuery);
             while (expiriesSet.next()) {
                 expiries.add(Utils.stringToDate(expiriesSet.getString("expiry")));
