@@ -4,6 +4,7 @@ import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.ZonedDateTime;
+import java.util.NavigableSet;
 import java.util.SortedSet;
 import java.util.TreeSet;
 
@@ -14,9 +15,9 @@ import static com.jsvandermeer.Utils.dateToString;
  * Created by Jacob on 4/6/2017.
  */
 abstract class Chain {
-    String underlier;
-    ZonedDateTime asOf;
-    SortedSet<ZonedDateTime> expiries;
+    private String underlier;
+    private ZonedDateTime asOf;
+    private NavigableSet<ZonedDateTime> expiries;
 
 
     Chain(String underlier, ZonedDateTime asOf, Connection connection, String table) {
@@ -33,6 +34,10 @@ abstract class Chain {
         } catch (SQLException exception) {
             exception.printStackTrace();
         }
+    }
+
+    NavigableSet<ZonedDateTime> getExpiries() {
+        return expiries;
     }
 
     static class Market {

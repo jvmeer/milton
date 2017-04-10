@@ -5,8 +5,7 @@ import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.ZonedDateTime;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
 
 import static com.jsvandermeer.Utils.dateToString;
 
@@ -42,8 +41,15 @@ public class Backtester {
             ForwardChain forwardChain = new ForwardChain(Utils.SPX_TICKER, asOf, connection);
             OptionChain futureOptionChain = new OptionChain(Utils.VIX_TICKER, asOf, connection);
             OptionChain forwardOptionChain = new OptionChain(Utils.SPX_TICKER, asOf, connection);
-            for (ZonedDateTime expiry : futureChain.expiries) {
-                
+            for (ZonedDateTime startFutureExpiry : futureChain.getExpiries()) {
+                for (ZonedDateTime endFutureExpiry : futureChain.getExpiries().tailSet(startFutureExpiry)) {
+                    NavigableSet<ZonedDateTime> futureExpiries = futureChain.getExpiries().subSet(startFutureExpiry, true,
+                            endFutureExpiry, true);
+                    Set<ZonedDateTime> frontForwardExpiries;
+
+                    Replication replication = new Replication(Utils.VIX_TICKER, Utils.SPX_TICKER, asOf, futureExpiries,
+                            )
+                }
             }
         }
     }
