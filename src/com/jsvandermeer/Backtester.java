@@ -45,13 +45,42 @@ public class Backtester {
                 for (ZonedDateTime endFutureExpiry : futureChain.getExpiries().tailSet(startFutureExpiry)) {
                     NavigableSet<ZonedDateTime> futureExpiries = futureChain.getExpiries().subSet(startFutureExpiry, true,
                             endFutureExpiry, true);
-                    Set<ZonedDateTime> frontForwardExpiries;
+                    SortedSet<OptionChain.Strip> futureStrips = new TreeSet<>();
+                    for (ZonedDateTime futureExpiry : futureExpiries) {
+                        String futureStripStatement = "select strike, is_call, bid_price, ask_price, bid_size, " +
+                                "ask_size from options where underlier=" + Utils.VIX_TICKER + " and expiry=" +
+                                Utils.dateToString(futureExpiry) + " and as_of=" + Utils.dateToString(asOf);
+                        ResultSet futureStripSet = null;
+                        try {
+                            futureStripSet = connection.createStatement().executeQuery(futureStripStatement);
+                        } catch (SQLException exception) {
+                            exception.printStackTrace();
+                        }
+                        futureStrips.add(new OptionChain.Strip(futureExpiry, futureStripSet));
+                    }
+                    Set<ZonedDateTime> frontExpiries =
+                            forwardChain.getExpiries().subSet(startFutureExpiry.minusDays(Replication.DAY_TOLERANCE),
+                                    true, startFutureExpiry.plusDays(Replication.DAY_TOLERANCE), true);
+                    Set<ZonedDateTime> backExpiries =
+                            forwardChain.getExpiries().subSet(endFutureExpiry.minusDays(Replication.DAY_TOLERANCE),
+                                    true, endFutureExpiry.plusDays(Replication.DAY_TOLERANCE), true);
+                    for (ZonedDateTime frontExpiry : frontExpiries) {
+                        for (ZonedDateTime backExpiry : backExpiries) {
+                            Replication replication = new Replication(Utils.VIX_TICKER, Utils.SPX_TICKER, asOf,
+                                    futureExpiries, frontExpiry, backExpiry, )
+                        }
+                    }
 
-                    Replication replication = new Replication(Utils.VIX_TICKER, Utils.SPX_TICKER, asOf, futureExpiries,
-                            )
+//                    Replication replication = new Replication(Utils.VIX_TICKER, Utils.SPX_TICKER, asOf, futureExpiries,
+//                            )
                 }
             }
         }
+    }
+
+    private Set<ZonedDateTime> getExpiriesWithinDays(NavigableSet<ZonedDateTime> expiries, ZonedDateTime date,
+                                                     int days) {
+
     }
 
 

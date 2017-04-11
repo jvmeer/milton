@@ -4,6 +4,8 @@ import java.time.Month;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 
+import static java.time.temporal.ChronoUnit.DAYS;
+
 /**
  * Created by Jacob on 3/25/2017.
  */
@@ -33,7 +35,9 @@ public class Utils {
         return date;
     }
 
-    static double calendarDaysBetween(ZonedDateTime )
+    static double absoluteCalendarDaysBetween(ZonedDateTime date1, ZonedDateTime date2) {
+        return Math.abs(DAYS.between(date1, date2));
+    }
 
     public static ZonedDateTime expiryFromTicker(String ticker) {
         String[] tokens = ticker.split(" ");

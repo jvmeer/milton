@@ -9,6 +9,7 @@ import java.util.SortedSet;
  * Created by Jacob on 3/26/2017.
  */
 public class Replication implements Comparable<Replication> {
+    final static int DAY_TOLERANCE = 3;
     String futureUnderlier;
     String forwardUnderlier;
     ZonedDateTime asOf;

@@ -302,15 +302,15 @@ public class Bloomberg {
             } catch (NotFoundException exception) {
                 askPrice = bidPrice;
             }
-            long bidSize;
+            int bidSize;
             try {
-                bidSize = fieldData.getElement("PX_BID").getValueAsInt64();
+                bidSize = fieldData.getElement("PX_BID").getValueAsInt32();
             } catch (NotFoundException exception) {
                 bidSize = 0;
             }
-            long askSize;
+            int askSize;
             try {
-                askSize = fieldData.getElement("PX_BID").getValueAsInt64();
+                askSize = fieldData.getElement("PX_BID").getValueAsInt32();
             } catch (NotFoundException exception) {
                 askSize = 0;
             }

@@ -37,7 +37,7 @@ class OptionChain extends Chain {
         }
     }
 
-    static class Strip {
+    public static class Strip {
         ZonedDateTime expiry;
         Map<Option, Market> options;
 

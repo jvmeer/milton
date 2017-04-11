@@ -15,9 +15,9 @@ import static com.jsvandermeer.Utils.dateToString;
  * Created by Jacob on 4/6/2017.
  */
 abstract class Chain {
-    private String underlier;
-    private ZonedDateTime asOf;
-    private NavigableSet<ZonedDateTime> expiries;
+    String underlier;
+    ZonedDateTime asOf;
+    NavigableSet<ZonedDateTime> expiries;
 
 
     Chain(String underlier, ZonedDateTime asOf, Connection connection, String table) {
