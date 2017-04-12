@@ -41,21 +41,18 @@ public class Replication implements Comparable<Replication> {
         this.backForward = backForward;
     }
 
-    double futureStrikeBid() {
+    double indexMidStrike() {
         return 0.0;
     }
 
-    double futureStrikeMide() {
+    double vixBidStrike() {
         return 0.0;
     }
 
-    double futureStrikeAsk() {
+    double vixAskStrike() {
         return 0.0;
     }
 
-    double forwardStrikeMid() {
-        return 0.0;
-    }
 
     @Override public boolean equals(Object other) {
         if (!(other instanceof Replication)) return false;
