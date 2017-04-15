@@ -1,8 +1,11 @@
 package com.jsvandermeer;
 
 import com.bloomberglp.blpapi.*;
+import org.apache.commons.net.ftp.FTPClient;
+import org.apache.commons.net.ftp.FTPFile;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
@@ -12,18 +15,18 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.zip.ZipInputStream;
 
 /**
  * Created by Jacob on 4/1/2017.
  */
-public class Bloomberg {
+public class DataLoader {
 
     private static int correlationIDCounter = 1;
     private enum ConversationType {CHAIN, IDENTIFICATION, OPTION_MARKET, FORWARD, FUTURE, FUTURE_MARKET}
 
-    private static final String[] underliers = {Utils.SPX_TICKER, Utils.VIX_TICKER};
 
-    static void loadOptions(ZonedDateTime startDate, ZonedDateTime endDate) {
+    static void loadOptionsFromBloomberg(ZonedDateTime startDate, ZonedDateTime endDate, String[] underliers) {
         Session session = createSession();
         Service service = session.getService("//blp/refdata");
         ZonedDateTime asOf = Utils.stringToDate("20170103");
@@ -60,7 +63,7 @@ public class Bloomberg {
         }
     }
 
-    static void loadSpxForwards(ZonedDateTime startDate, ZonedDateTime endDate, String databasePath) {
+    static void loadForwards(ZonedDateTime startDate, ZonedDateTime endDate, String databasePath) {
         Session session = createSession();
         Service service = session.getService("//blp/refdata");
 
@@ -340,6 +343,43 @@ public class Bloomberg {
         MessageIterator iter = event.messageIterator();
         while (iter.hasNext()) {
             System.out.println(iter.next().toString());
+        }
+    }
+
+
+
+
+    static void loadOptionsFromLiveVol(String directory) {
+        FTPClient ftpClient = new FTPClient();
+
+        try {
+            ftpClient.connect("ftp.datashop.livevol.com");
+            ftpClient.login("jsvmeer@gmail.com", "courageandhonor");
+            System.out.println(ftpClient.isConnected());
+            ftpClient.changeWorkingDirectory(directory);
+            FTPFile[] ftpFiles = ftpClient.listFiles();
+            for (FTPFile ftpFile : ftpFiles) {
+                if (ftpFile.isFile()) {
+                    String name = ftpFile.getName();
+                    InputStream inputStream = ftpClient.retrieveFileStream(name);
+                    ftpClient.completePendingCommand();
+                    ZipInputStream zipInputStream = new ZipInputStream(inputStream);
+                    System.out.println(zipInputStream.getNextEntry().getName());
+                    zipInputStream.close();
+                    inputStream.close();
+                    //                ZipInputStream zipInputStream = new ZipInputStream(ftpClient.retrieveFileStream(name));
+                    //                System.out.println(zipInputStream.getNextEntry().toString());
+                }
+            }
+        } catch (IOException exception) {
+            exception.printStackTrace();
+
+        } finally {
+            try {
+                ftpClient.disconnect();
+            } catch (IOException exception) {
+                exception.printStackTrace();
+            }
         }
     }
 

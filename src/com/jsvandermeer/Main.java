@@ -26,8 +26,7 @@ public class Main {
         System.out.println(interval);
 
 
-//        Bloomberg.loadSpxForwards(Utils.stringToDate("20170103"), Utils.stringToDate("20170106"),
-//                "jdbc:sqlite:C:\\Users\\Jacob\\Dropbox\\Code\\milton\\history.db");
+        DataLoader.loadOptionsFromLiveVol("order_000001515/item_000002548");
 
 
 //        History history = new History(startDate, endDate, "jdbc:sqlite:C:\\Users\\Jacob\\Dropbox\\Code\\milton\\history.db");

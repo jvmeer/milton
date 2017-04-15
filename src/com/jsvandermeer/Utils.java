@@ -11,7 +11,7 @@ import static java.time.temporal.ChronoUnit.DAYS;
  */
 public class Utils {
 
-    static final String DATABASE_PATH = "jdbc:sqlite:C:\\Users\\Jacob\\Dropbox\\Code\\milton\\history.db";
+    static final String DATABASE_PATH = "jdbc:sqlite:C:\\Users\\Jacob\\Dropbox\\Code\\milton\\historical_data.db";
 
     static final String VIX_TICKER = "VIX Index";
     static final String SPX_TICKER = "SPX Index";
@@ -44,5 +44,6 @@ public class Utils {
         String[] monthDayYear = tokens[2].split("/");
         return stringToDate(monthDayYear[2] + monthDayYear[0] + monthDayYear[1]);
     }
+
 
 }
