@@ -17,6 +17,7 @@ public class DataInterface {
     private DataInterface() {
         try {
             connection = DriverManager.getConnection(Utils.DATABASE_PATH);
+            connection.setAutoCommit(false);
         } catch (SQLException exception) {
             exception.printStackTrace();
         }
@@ -36,6 +37,7 @@ public class DataInterface {
                 "bid_price, ask_price, bid_size, ask_size) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)";
         try {
             connection.createStatement().executeUpdate(tableStatement);
+            int counter = 1;
             for (OptionLine optionLine : optionLines) {
                 PreparedStatement preparedStatement = connection.prepareStatement(insertStatement);
                 preparedStatement.setString(1, optionLine.underlier);
@@ -49,6 +51,8 @@ public class DataInterface {
                 preparedStatement.setInt(9, optionLine.askSize);
 
                 preparedStatement.executeUpdate();
+                counter++;
+                if (counter % 100 == 0) System.out.println(counter);
             }
             connection.commit();
         } catch (SQLException exception) {
