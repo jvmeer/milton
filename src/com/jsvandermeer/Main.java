@@ -19,14 +19,16 @@ public class Main {
 
     public static void main(String[] args) {
 
-        ZonedDateTime startDate = Utils.stringToDate("2017-04-19T08:30:00-06:00");
-        ZonedDateTime endDate = Utils.stringToDate("2017-04-21T08:29:59-06:00");
+        ZonedDateTime startDate = Utils.stringToDate("2017-04-19T08:30:00[America/New_York]");
+        ZonedDateTime endDate = Utils.stringToDate("2017-04-21T08:29:59[America/New_York]");
 
         long interval = DAYS.between(startDate, endDate);
         System.out.println(interval);
 
+        String[] underliers = {Utils.SPX_TICKER, Utils.VIX_TICKER};
 
-        DataLoader.loadOptionsFromLiveVol("order_000001515/item_000002548");
+//        DataLoader.retrieveFilesFromLiveVol("order_000001515/item_000002548");
+        DataLoader.loadOptionsFromLocal(startDate, endDate, underliers);
 
 
 //        History history = new History(startDate, endDate, "jdbc:sqlite:C:\\Users\\Jacob\\Dropbox\\Code\\milton\\history.db");

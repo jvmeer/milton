@@ -11,12 +11,17 @@ import static java.time.temporal.ChronoUnit.DAYS;
  */
 public class Utils {
 
-    static final String DATABASE_PATH = "jdbc:sqlite:C:\\Users\\Jacob\\Dropbox\\Code\\milton\\historical_data.db";
+    private static final DateTimeFormatter dateTimeFormatter =
+            DateTimeFormatter.ofPattern("uuuu'-'MM'-'dd'T'HH':'mm':'ss'['VV']'");
 
-    static final String VIX_TICKER = "VIX Index";
-    static final String SPX_TICKER = "SPX Index";
-    static final String EXPIRY_TIME = "131500";
-    static final String TIME_ZONE = "America/Chicago";
+    static final String DATABASE_PATH = "jdbc:sqlite:C:\\Users\\Jacob\\Dropbox\\Code\\milton\\historical_data.db";
+    static final String LOCAL_FILES_PATH = "C:\\Users\\Jacob\\Dropbox\\Code\\milton\\live_vol_files\\";
+
+    static final String VIX_TICKER = "VIX";
+    static final String SPX_TICKER = "SPX";
+    static final String US_MORNING_EXPIRY_TIME = "09:30:00";
+    static final String US_AFTERNOON_EXPIRY_TIME = "16:00:00";
+    static final String US_TZID = "America/New_York";
     static final int VIX_DAYS = 30;
 
     static String dateToString(ZonedDateTime date) {
@@ -24,7 +29,8 @@ public class Utils {
     }
 
     static ZonedDateTime stringToDate(String date) {
-        return ZonedDateTime.parse(date, DateTimeFormatter.ISO_OFFSET_DATE_TIME);
+        DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern("uuuu'-'MM'-'dd'T'HH':'mm':'ss'['VV']'");
+        return ZonedDateTime.parse(date, dateTimeFormatter);
     }
 
     static ZonedDateTime addCalendarDays(ZonedDateTime date, int days) {

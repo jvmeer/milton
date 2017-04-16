@@ -30,9 +30,12 @@ public class DataInterface {
     }
 
     void insertOptions(Collection<OptionLine> optionLines) {
+        String tableStatement = "CREATE TABLE IF NOT EXISTS options(underlier TEXT, expiry TEXT, strike REAL, " +
+                "is_call BOOLEAN, as_of TEXT, bid_price REAL, ask_price REAL, bid_size INTEGER, ask_size INTEGER)";
         String insertStatement = "INSERT INTO options(underlier, expiry, strike, is_call, as_of, " +
                 "bid_price, ask_price, bid_size, ask_size) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)";
         try {
+            connection.createStatement().executeUpdate(tableStatement);
             for (OptionLine optionLine : optionLines) {
                 PreparedStatement preparedStatement = connection.prepareStatement(insertStatement);
                 preparedStatement.setString(1, optionLine.underlier);
@@ -93,7 +96,7 @@ public class DataInterface {
         }
     }
 
-    abstract class Line {
+    static abstract class Line {
         final String underlier;
         final String expiry;
         final String asOf;
@@ -105,7 +108,7 @@ public class DataInterface {
         }
     }
 
-    class OptionLine extends Line {
+    static class OptionLine extends Line {
         final double strike;
         final boolean isCall;
         final double bidPrice;
@@ -125,7 +128,7 @@ public class DataInterface {
         }
     }
 
-    class FutureLine extends Line {
+    static class FutureLine extends Line {
         final double bidPrice;
         final double askPrice;
         final int bidSize;
@@ -141,7 +144,7 @@ public class DataInterface {
         }
     }
 
-    class ForwardLine extends Line {
+    static class ForwardLine extends Line {
         final double forward;
 
         ForwardLine(String underlier, String expiry, String asOf, double forward) {

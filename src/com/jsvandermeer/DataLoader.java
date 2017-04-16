@@ -1,20 +1,19 @@
 package com.jsvandermeer;
 
 import com.bloomberglp.blpapi.*;
+import org.apache.commons.net.ftp.FTP;
 import org.apache.commons.net.ftp.FTPClient;
 import org.apache.commons.net.ftp.FTPFile;
 
-import java.io.IOException;
-import java.io.InputStream;
+import java.io.*;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.time.ZonedDateTime;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipFile;
 import java.util.zip.ZipInputStream;
 
 /**
@@ -347,28 +346,71 @@ public class DataLoader {
     }
 
 
+    static void loadOptionsFromLocal(ZonedDateTime startDate, ZonedDateTime endDate, String[] underliers) {
+        File localDirectory = new File(Utils.LOCAL_FILES_PATH);
+        DataInterface dataInterface = DataInterface.getInstance();
+        for (File file : localDirectory.listFiles()) {
+            Set<DataInterface.OptionLine> optionLines = new HashSet<>();
+            try {
+                ZipFile zipFile = new ZipFile(file);
+                String name = file.getName();
+                ZipEntry zipEntry = zipFile.entries().nextElement();
+                InputStream inputStream = zipFile.getInputStream(zipEntry);
+                BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(inputStream));
+                while (true) {
+                    String line = bufferedReader.readLine();
+                    if (line == null) break;
+                    String[] cells = line.split(",");
+                    String root = cells[LiveVolColumn.ROOT.columnNumber];
+                    String underlier = extractSubstringFromArray(root, underliers);
+                    if (underlier != null) {
+                        String expiry = cells[LiveVolColumn.EXPIRATION.columnNumber] + "T" +
+                                (root.substring(root.length() - 1).equals("W") ? Utils.US_AFTERNOON_EXPIRY_TIME :
+                                Utils.US_MORNING_EXPIRY_TIME) + "[" + Utils.US_TZID + "]";
+                        double strike = Double.parseDouble(cells[LiveVolColumn.STRIKE.columnNumber]);
+                        boolean isCall = cells[LiveVolColumn.OPTION_TYPE.columnNumber].equals("C");
+                        String asOf = cells[LiveVolColumn.QUOTE_DATE.columnNumber] + "T" + LIVE_VOL_AS_OF_TIME +
+                                "[" + Utils.US_TZID + "]";
+                        double bidPrice = Double.parseDouble(cells[LiveVolColumn.BID_1545.columnNumber]);
+                        double askPrice = Double.parseDouble(cells[LiveVolColumn.ASK_1545.columnNumber]);
+                        int bidSize = Integer.parseInt(cells[LiveVolColumn.BID_SIZE_1545.columnNumber]);
+                        int askSize = Integer.parseInt(cells[LiveVolColumn.ASK_SIZE_1545.columnNumber]);
+                        DataInterface.OptionLine optionLine = new DataInterface.OptionLine(underlier, expiry, strike,
+                                isCall, asOf, bidPrice, askPrice, bidSize, askSize);
+                        optionLines.add(optionLine);
+                    }
+                }
+                bufferedReader.close();
+                inputStream.close();
+            } catch (IOException exception) {
+                exception.printStackTrace();
+            }
+            dataInterface.insertOptions(optionLines);
+        }
+    }
 
+    private static String extractSubstringFromArray(String string, String[] substrings) {
+        for (String substring : substrings) {
+            if (string.contains(substring)) return substring;
+        }
+        return null;
+    }
 
-    static void loadOptionsFromLiveVol(String directory) {
+    static void retrieveFilesFromLiveVol(String remoteDirectory) {
         FTPClient ftpClient = new FTPClient();
-
         try {
             ftpClient.connect("ftp.datashop.livevol.com");
             ftpClient.login("jsvmeer@gmail.com", "courageandhonor");
-            System.out.println(ftpClient.isConnected());
-            ftpClient.changeWorkingDirectory(directory);
+            ftpClient.setFileType(FTP.BINARY_FILE_TYPE);
+            ftpClient.changeWorkingDirectory(remoteDirectory);
             FTPFile[] ftpFiles = ftpClient.listFiles();
             for (FTPFile ftpFile : ftpFiles) {
                 if (ftpFile.isFile()) {
-                    String name = ftpFile.getName();
-                    InputStream inputStream = ftpClient.retrieveFileStream(name);
-                    ftpClient.completePendingCommand();
-                    ZipInputStream zipInputStream = new ZipInputStream(inputStream);
-                    System.out.println(zipInputStream.getNextEntry().getName());
-                    zipInputStream.close();
-                    inputStream.close();
-                    //                ZipInputStream zipInputStream = new ZipInputStream(ftpClient.retrieveFileStream(name));
-                    //                System.out.println(zipInputStream.getNextEntry().toString());
+                    String remoteName = ftpFile.getName();
+                    String localName = Utils.LOCAL_FILES_PATH + remoteName;
+                    OutputStream outputStream = new FileOutputStream(new File(localName));
+                    ftpClient.retrieveFile(remoteName, outputStream);
+                    outputStream.close();
                 }
             }
         } catch (IOException exception) {
@@ -382,5 +424,16 @@ public class DataLoader {
             }
         }
     }
+
+    private enum LiveVolColumn {
+        QUOTE_DATE(1), ROOT(2), EXPIRATION(3), STRIKE(4), OPTION_TYPE(5), BID_SIZE_1545(11), BID_1545(12),
+        ASK_SIZE_1545(13), ASK_1545(14), BID_SIZE_EOD(17), BID_EOD(18), ASK_SIZE_EOD(19), ASK_EOD(20);
+        final int columnNumber;
+        LiveVolColumn(int columnNumber) {
+            this.columnNumber = columnNumber;
+        }
+    }
+
+    private static String LIVE_VOL_AS_OF_TIME = "15:45:00";
 
 }
