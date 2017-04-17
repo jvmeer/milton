@@ -21,7 +21,7 @@ public class Backtester {
         this.connection = connection;
     }
 
-    void populateStrikeHistory() {
+    void populateStrikeHistory(Utils.Underlier indexUnderlier, Utils.Underlier volUnderlier) {
         List<ZonedDateTime> asOfs = new ArrayList<>();
         String asOfsStatement = "select distinct as_of from vix_futures where as_of>=" + dateToString(startDate) +
                 " and as_of <" + dateToString(endDate);
@@ -34,10 +34,9 @@ public class Backtester {
             exception.printStackTrace();
         }
         for (ZonedDateTime asOf : asOfs) {
-            FutureChain futureChain = new FutureChain(Utils.VIX_TICKER, asOf, connection);
-            ForwardChain forwardChain = new ForwardChain(Utils.SPX_TICKER, asOf, connection);
-            OptionChain futureOptionChain = new OptionChain(Utils.VIX_TICKER, asOf, connection);
-            OptionChain forwardOptionChain = new OptionChain(Utils.SPX_TICKER, asOf, connection);
+            FutureChain futureChain = new FutureChain(volUnderlier.ticker, asOf, connection);
+            OptionChain futureOptionChain = new OptionChain(volUnderlier.ticker, asOf, connection);
+            OptionChain forwardOptionChain = new OptionChain(indexUnderlier.ticker, asOf, connection);
             for (ZonedDateTime startFutureExpiry : futureChain.getExpiries()) {
                 for (ZonedDateTime endFutureExpiry : futureChain.getExpiries().tailSet(startFutureExpiry)) {
                     NavigableSet<ZonedDateTime> futureExpiries = futureChain.getExpiries().subSet(startFutureExpiry, true,
@@ -46,7 +45,7 @@ public class Backtester {
                     Map<ZonedDateTime, Chain.Market> futures = new HashMap<>();
                     for (ZonedDateTime futureExpiry : futureExpiries) {
                         String futureStripStatement = "select strike, is_call, bid_price, ask_price, bid_size, " +
-                                "ask_size from options where underlier=" + Utils.VIX_TICKER + " and expiry=" +
+                                "ask_size from options where underlier=" + volUnderlier.ticker + " and expiry=" +
                                 Utils.dateToString(futureExpiry) + " and as_of=" + Utils.dateToString(asOf);
                         ResultSet futureStripSet = null;
                         try {
@@ -56,7 +55,7 @@ public class Backtester {
                         }
                         futureStrips.add(new OptionChain.Strip(futureExpiry, futureStripSet));
                         String futureStatement = "select bid_price, ask_price, bid_size, ask_size from futures where " +
-                                "underlier=" + Utils.VIX_TICKER + " and expiry=" + Utils.dateToString(futureExpiry) +
+                                "underlier=" + volUnderlier.ticker + " and expiry=" + Utils.dateToString(futureExpiry) +
                                 " and as_of=" + Utils.dateToString(asOf);
                         ResultSet futureSet = null;
                         try {
@@ -72,15 +71,15 @@ public class Backtester {
 
                     }
                     Set<ZonedDateTime> frontExpiries =
-                            forwardChain.getExpiries().subSet(startFutureExpiry.minusDays(Replication.DAY_TOLERANCE),
+                            forwardOptionChain.getExpiries().subSet(startFutureExpiry.minusDays(Replication.DAY_TOLERANCE),
                                     true, startFutureExpiry.plusDays(Replication.DAY_TOLERANCE), true);
                     Set<ZonedDateTime> backExpiries =
-                            forwardChain.getExpiries().subSet(endFutureExpiry.minusDays(Replication.DAY_TOLERANCE),
+                            forwardOptionChain.getExpiries().subSet(endFutureExpiry.minusDays(Replication.DAY_TOLERANCE),
                                     true, endFutureExpiry.plusDays(Replication.DAY_TOLERANCE), true);
                     for (ZonedDateTime frontExpiry : frontExpiries) {
                         for (ZonedDateTime backExpiry : backExpiries) {
                             String frontStripStatement = "select strike, is_call, bid_price, ask_price, bid_size, " +
-                                    "ask_size from options where underlier =" + Utils.SPX_TICKER + " and expiry=" +
+                                    "ask_size from options where underlier =" + indexUnderlier.ticker + " and expiry=" +
                                     Utils.dateToString(frontExpiry) + " and as_of=" + Utils.dateToString(asOf);
                             ResultSet frontStripSet = null;
                             try {
@@ -90,7 +89,7 @@ public class Backtester {
                             }
                             OptionChain.Strip frontStrip = new OptionChain.Strip(frontExpiry, frontStripSet);
                             String backStripStatement = "select strike, is_call, bid_price, ask_price, bid_size, " +
-                                    "ask_size from options where underlier =" + Utils.SPX_TICKER + " and expiry=" +
+                                    "ask_size from options where underlier =" + indexUnderlier.ticker + " and expiry=" +
                                     Utils.dateToString(backExpiry) + " and as_of=" + Utils.dateToString(asOf);
                             ResultSet backStripSet = null;
                             try {
@@ -101,7 +100,7 @@ public class Backtester {
                             OptionChain.Strip backStrip = new OptionChain.Strip(frontExpiry, frontStripSet);
 
                             String frontForwardStatement = "select forward from forwards where underlier=" +
-                                    Utils.SPX_TICKER + " and expiry=" + Utils.dateToString(frontExpiry) + " and " +
+                                    indexUnderlier.ticker + " and expiry=" + Utils.dateToString(frontExpiry) + " and " +
                                     "as_of=" + Utils.dateToString(asOf);
                             double frontForward = 0.0;
                             try {
@@ -114,7 +113,7 @@ public class Backtester {
                             }
 
                             String backForwardStatement = "select forward from forwards where underlier=" +
-                                    Utils.SPX_TICKER + " and expiry=" + Utils.dateToString(backExpiry) + " and " +
+                                    indexUnderlier.ticker + " and expiry=" + Utils.dateToString(backExpiry) + " and " +
                                     "as_of=" + Utils.dateToString(asOf);
                             double backForward = 0.0;
                             try {
@@ -128,18 +127,18 @@ public class Backtester {
 
 
 
-                            Replication replication = new Replication(Utils.VIX_TICKER, Utils.SPX_TICKER, asOf,
+                            Replication replication = new Replication(indexUnderlier.ticker, volUnderlier.ticker, asOf,
                                     futureExpiries, frontExpiry, backExpiry, futureStrips, frontStrip, backStrip,
                                     futures, frontForward, backForward);
 
 
-                            String replicationStatement = "insert into replications (index_underlier, vix_underlier," +
+                            String replicationStatement = "insert into replications (index_underlier, vol_underlier," +
                                     " front_expiry, back_expiry, as_of, index_mid, vix_bid, vix_ask) values (?, ?, ?," +
                                     " ?, ?, ?, ?, ?)";
                             try {
                                 PreparedStatement preparedStatement = connection.prepareStatement(replicationStatement);
-                                preparedStatement.setString(1, Utils.SPX_TICKER);
-                                preparedStatement.setString(2, Utils.VIX_TICKER);
+                                preparedStatement.setString(1, indexUnderlier.ticker);
+                                preparedStatement.setString(2, volUnderlier.ticker);
                                 preparedStatement.setString(3, Utils.dateToString(frontExpiry));
                                 preparedStatement.setString(4, Utils.dateToString(backExpiry));
                                 preparedStatement.setString(5, Utils.dateToString(asOf));

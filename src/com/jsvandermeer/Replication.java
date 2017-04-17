@@ -23,12 +23,12 @@ public class Replication implements Comparable<Replication> {
     double frontForward;
     double backForward;
 
-    Replication(String futureUnderlier, String forwardUnderlier, ZonedDateTime asOf,
+    Replication(String forwardUnderlier, String futureUnderlier, ZonedDateTime asOf,
                 SortedSet<ZonedDateTime> futureExpiries, ZonedDateTime frontExpiry, ZonedDateTime backExpiry,
                 SortedSet<OptionChain.Strip> futureStrips, OptionChain.Strip frontStrip, OptionChain.Strip backStrip,
                 Map<ZonedDateTime, Chain.Market> futures, double frontForward, double backForward) {
-        this.futureUnderlier = futureUnderlier;
         this.forwardUnderlier = forwardUnderlier;
+        this.futureUnderlier = futureUnderlier;
         this.asOf = asOf;
         this.futureExpiries = futureExpiries;
         this.frontExpiry = frontExpiry;

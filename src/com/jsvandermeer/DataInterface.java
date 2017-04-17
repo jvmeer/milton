@@ -31,8 +31,9 @@ public class DataInterface {
     }
 
     void insertOptions(Collection<OptionLine> optionLines) {
-        String tableStatement = "CREATE TABLE IF NOT EXISTS options(underlier TEXT, expiry TEXT, strike REAL, " +
-                "is_call BOOLEAN, as_of TEXT, bid_price REAL, ask_price REAL, bid_size INTEGER, ask_size INTEGER)";
+        String tableStatement = "CREATE TABLE IF NOT EXISTS options (underlier TEXT, expiry TEXT, strike REAL, " +
+                "is_call BOOLEAN, as_of TEXT, bid_price REAL, ask_price REAL, bid_size INTEGER, ask_size INTEGER) " +
+                "PRIMARY KEY (underlier, expiry, strike, is_call, as_of)";
         String insertStatement = "INSERT INTO options(underlier, expiry, strike, is_call, as_of, " +
                 "bid_price, ask_price, bid_size, ask_size) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)";
         try {
@@ -61,9 +62,13 @@ public class DataInterface {
     }
 
     void insertFutures(Collection<FutureLine> futureLines) {
+        String tableStatement = "CREATE TABLE IF NOT EXISTS futures (underlier TEXT, expiry TEXT, as_of TEXT, " +
+                "bid_price REAL, ask_price REAL, bid_size INTEGER, ask_size INTEGER) PRIMARY KEY (underlier, " +
+                "expiry, as_of)";
         String insertStatement = "INSERT INTO futures(underlier, expiry, as_of, bid_price, ask_price, bid_size, " +
                 "ask_size) VALUES(?, ?, ?, ?, ?, ?, ?)";
         try {
+            connection.createStatement().executeUpdate(tableStatement);
             for (FutureLine futureLine : futureLines) {
                 PreparedStatement preparedStatement = connection.prepareStatement(insertStatement);
                 preparedStatement.setString(1, futureLine.underlier);
@@ -83,8 +88,11 @@ public class DataInterface {
     }
 
     void insertForwards(Collection<ForwardLine> forwardLines) {
+        String tableStatement = "CREATE TABLE IF NOT EXISTS forwards (underlier TEXT, expiry TEXT, as_of TEXT, " +
+                "forward REAL) PRIMARY KEY (underlier, expiry, as_of)";
         String insertStatement = "INSERT INTO forwards(underlier, expiry, as_of, forward) VALUES(?, ?, ?, ?)";
         try {
+            connection.createStatement().executeUpdate(tableStatement);
             for (ForwardLine forwardLine : forwardLines) {
                 PreparedStatement preparedStatement = connection.prepareStatement(insertStatement);
                 preparedStatement.setString(1, forwardLine.underlier);

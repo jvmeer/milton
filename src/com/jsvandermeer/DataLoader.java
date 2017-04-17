@@ -62,48 +62,29 @@ public class DataLoader {
         }
     }
 
-    static void loadForwards(ZonedDateTime startDate, ZonedDateTime endDate, String databasePath) {
-        Session session = createSession();
-        Service service = session.getService("//blp/refdata");
-
-        String newDatabasePath = "jdbc:sqlite:C:\\Users\\Jacob\\Dropbox\\Code\\milton\\history"
-                + ZonedDateTime.now().toString() + ".db";
-        Connection connection = null;
-        try {
-            if (databasePath == null) {
-                connection = DriverManager.getConnection(newDatabasePath);
-            } else {
-                connection = DriverManager.getConnection(databasePath);
-            }
-            connection.createStatement().execute("create table if not exists spx_forwards (expiry text," +
-                    "as_of text, forward real, primary key (expiry, as_of))");
-        } catch (SQLException exception) {
-            exception.printStackTrace();
-        }
-
-
-        String insertStatement = "insert into spx_forwards(expiry, as_of, forward) values(?, ?, ?)";
-        String underlier = Utils.SPX_TICKER;
-
-        for (ZonedDateTime dateCursor = startDate; dateCursor.isBefore(endDate); dateCursor = dateCursor.plusDays(1)) {
-
-
-            Map<ZonedDateTime, Double> forwards = new HashMap<>();
-            executeConversation(session, service, dateCursor, ConversationType.FORWARD, underlier, null,
-                    null, null, forwards);
-            for (Map.Entry<ZonedDateTime, Double> entry : forwards.entrySet()) {
-                try {
-                    PreparedStatement preparedStatement = connection.prepareStatement(insertStatement);
-                    preparedStatement.setString(1, Utils.dateToString(entry.getKey()));
-                    preparedStatement.setString(2, Utils.dateToString(dateCursor));
-                    preparedStatement.setDouble(3, entry.getValue());
-                    preparedStatement.executeUpdate();
-                } catch (SQLException exception) {
-                    exception.printStackTrace();
-                }
-            }
-        }
-    }
+//    static void loadForwardsFromBloomberg(ZonedDateTime startDate, ZonedDateTime endDate, String[] underliers) {
+//        Session session = createSession();
+//        Service service = session.getService("//blp/refdata");
+//
+//        for (ZonedDateTime dateCursor = startDate; dateCursor.isBefore(endDate); dateCursor = dateCursor.plusDays(1)) {
+//
+//
+//            Map<ZonedDateTime, Double> forwards = new HashMap<>();
+//            executeConversation(session, service, dateCursor, ConversationType.FORWARD, underlier, null,
+//                    null, null, forwards);
+//            for (Map.Entry<ZonedDateTime, Double> entry : forwards.entrySet()) {
+//                try {
+//                    PreparedStatement preparedStatement = connection.prepareStatement(insertStatement);
+//                    preparedStatement.setString(1, Utils.dateToString(entry.getKey()));
+//                    preparedStatement.setString(2, Utils.dateToString(dateCursor));
+//                    preparedStatement.setDouble(3, entry.getValue());
+//                    preparedStatement.executeUpdate();
+//                } catch (SQLException exception) {
+//                    exception.printStackTrace();
+//                }
+//            }
+//        }
+//    }
 
 
 
@@ -346,7 +327,8 @@ public class DataLoader {
     }
 
 
-    static void loadOptionsFromLocal(ZonedDateTime startDate, ZonedDateTime endDate, String[] underliers) {
+    static void loadOptionsFromLocal() {
+        Map<String, Utils.Underlier> underlierMap = Utils.underlierMap();
         File localDirectory = new File(Utils.LOCAL_FILES_PATH);
         DataInterface dataInterface = DataInterface.getInstance();
         for (File file : localDirectory.listFiles()) {
@@ -362,20 +344,21 @@ public class DataLoader {
                     if (line == null) break;
                     String[] cells = line.split(",");
                     String root = cells[LiveVolColumn.ROOT.columnNumber];
-                    String underlier = extractSubstringFromArray(root, underliers);
-                    if (underlier != null) {
+                    String ticker = extractSubstringFromCollection(root, underlierMap.keySet());
+                    if (ticker != null) {
+                        Utils.Underlier underlier = underlierMap.get(ticker);
                         String expiry = cells[LiveVolColumn.EXPIRATION.columnNumber] + "T" +
-                                (root.substring(root.length() - 1).equals("W") ? Utils.US_AFTERNOON_EXPIRY_TIME :
-                                Utils.US_MORNING_EXPIRY_TIME) + "[" + Utils.US_TZID + "]";
+                                (root.substring(root.length() - 1).equals("W") ? underlier.alternateExpiryTime :
+                                underlier.primaryExpiryTime) + "[" + underlier.timeZoneId + "]";
                         double strike = Double.parseDouble(cells[LiveVolColumn.STRIKE.columnNumber]);
                         boolean isCall = cells[LiveVolColumn.OPTION_TYPE.columnNumber].equals("C");
-                        String asOf = cells[LiveVolColumn.QUOTE_DATE.columnNumber] + "T" + LIVE_VOL_AS_OF_TIME +
-                                "[" + Utils.US_TZID + "]";
-                        double bidPrice = Double.parseDouble(cells[LiveVolColumn.BID_1545.columnNumber]);
-                        double askPrice = Double.parseDouble(cells[LiveVolColumn.ASK_1545.columnNumber]);
-                        int bidSize = Integer.parseInt(cells[LiveVolColumn.BID_SIZE_1545.columnNumber]);
-                        int askSize = Integer.parseInt(cells[LiveVolColumn.ASK_SIZE_1545.columnNumber]);
-                        DataInterface.OptionLine optionLine = new DataInterface.OptionLine(underlier, expiry, strike,
+                        String asOf = cells[LiveVolColumn.QUOTE_DATE.columnNumber] + "T" + underlier.endOfDayTime +
+                                "[" + underlier.timeZoneId + "]";
+                        double bidPrice = Double.parseDouble(cells[LiveVolColumn.BID_EOD.columnNumber]);
+                        double askPrice = Double.parseDouble(cells[LiveVolColumn.ASK_EOD.columnNumber]);
+                        int bidSize = Integer.parseInt(cells[LiveVolColumn.BID_SIZE_EOD.columnNumber]);
+                        int askSize = Integer.parseInt(cells[LiveVolColumn.ASK_SIZE_EOD.columnNumber]);
+                        DataInterface.OptionLine optionLine = new DataInterface.OptionLine(ticker, expiry, strike,
                                 isCall, asOf, bidPrice, askPrice, bidSize, askSize);
                         optionLines.add(optionLine);
                     }
@@ -389,7 +372,7 @@ public class DataLoader {
         }
     }
 
-    private static String extractSubstringFromArray(String string, String[] substrings) {
+    private static String extractSubstringFromCollection(String string, Collection<String> substrings) {
         for (String substring : substrings) {
             if (string.contains(substring)) return substring;
         }
@@ -399,8 +382,8 @@ public class DataLoader {
     static void retrieveFilesFromLiveVol(String remoteDirectory) {
         FTPClient ftpClient = new FTPClient();
         try {
-            ftpClient.connect("ftp.datashop.livevol.com");
-            ftpClient.login("jsvmeer@gmail.com", "courageandhonor");
+            ftpClient.connect(Utils.LIVE_VOL_ADDRESS);
+            ftpClient.login(Utils.LIVE_VOL_USERNAME, Utils.LIVE_VOL_PASSWORD);
             ftpClient.setFileType(FTP.BINARY_FILE_TYPE);
             ftpClient.changeWorkingDirectory(remoteDirectory);
             FTPFile[] ftpFiles = ftpClient.listFiles();
@@ -433,7 +416,5 @@ public class DataLoader {
             this.columnNumber = columnNumber;
         }
     }
-
-    private static String LIVE_VOL_AS_OF_TIME = "15:45:00";
 
 }

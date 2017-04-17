@@ -5,7 +5,9 @@ import com.bloomberglp.blpapi.*;
 
 import java.io.IOException;
 import java.nio.file.Paths;
+import java.time.LocalDate;
 import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -22,13 +24,18 @@ public class Main {
         ZonedDateTime startDate = Utils.stringToDate("2017-04-19T08:30:00[America/New_York]");
         ZonedDateTime endDate = Utils.stringToDate("2017-04-21T08:29:59[America/New_York]");
 
+        LocalDate startLocalDate = stringToDate("20170403");
+        LocalDate endLocalDate = stringToDate("20170405");
+
         long interval = DAYS.between(startDate, endDate);
         System.out.println(interval);
 
-        String[] underliers = {Utils.SPX_TICKER, Utils.VIX_TICKER};
 
 //        DataLoader.retrieveFilesFromLiveVol("order_000001515/item_000002548");
-        DataLoader.loadOptionsFromLocal(startDate, endDate, underliers);
+//        DataLoader.loadOptionsFromLocal();
+
+        BloombergInterface bloombergInterface = BloombergInterface.getInstance();
+        bloombergInterface.retrieveFutureLines(startLocalDate, endLocalDate, Utils.Underlier.VIX);
 
 
 //        History history = new History(startDate, endDate, "jdbc:sqlite:C:\\Users\\Jacob\\Dropbox\\Code\\milton\\history.db");
@@ -38,7 +45,10 @@ public class Main {
     }
 
 
-
+    static LocalDate stringToDate(String date) {
+        DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern("uuuuMMdd");
+        return LocalDate.parse(date, dateTimeFormatter);
+    }
 
 
 }
