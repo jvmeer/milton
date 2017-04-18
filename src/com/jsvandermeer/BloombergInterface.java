@@ -70,23 +70,23 @@ public class BloombergInterface {
         for (LocalDate dateCursor = startDate; dateCursor.isBefore(endDate); dateCursor = dateCursor.plusDays(1)) {
             request = createFutureChainRequest(underlier, dateCursor);
             Set<String> bloombergTickers = processChainResponse(request);
+            request = createFuturePropertyRequest(bloombergTickers);
+            Map<String, String> properties = processPropertyResponse(request);
             request = createFutureQuoteRequest(bloombergTickers, dateCursor);
-            Map<String, Chain.Market> = processQuoteResponse(request);
-            try {
-                session.sendRequest(request, new CorrelationID(correlationId++));
-            } catch (IOException exception) {
-                exception.printStackTrace();
-            }
-            continueToLoop = true;
-            while (continueToLoop) {
-                try {
-                    Event event = session.nextEvent();
-                }
-            }
+            Map<String, Chain.Market> markets = processQuoteResponse(request);
 
-
+            for (String bloombergTicker : bloombergTickers) {
+                String expiry = properties.get(bloombergTicker) + "T" + underlier.primaryExpiryTime + "[" +
+                        underlier.timeZoneId + "]";
+                String asOf = dateCursor.format(DateTimeFormatter.ISO_LOCAL_DATE) + "T" + underlier.endOfDayTime +
+                        "[" + underlier.timeZoneId + "]";
+                Chain.Market market = markets.get(bloombergTicker);
+                DataInterface.FutureLine futureLine = new DataInterface.FutureLine(underlier.ticker, expiry, asOf,
+                        market.bidPrice, market.askPrice, market.bidSize, market.askSize);
+                futureLines.add(futureLine);
+            }
         }
-        return new HashSet<>();
+        return futureLines;
     }
 
     private Request createFutureChainRequest(Utils.Underlier underlier, LocalDate asOf) {
@@ -100,6 +100,15 @@ public class BloombergInterface {
         identifierOverride.setElement("fieldId", "DISPLAY_ID_BB_GLOBAL_OVERRIDE");
         identifierOverride.setElement("value", "False");
 
+        return request;
+    }
+
+    private Request createFuturePropertyRequest(Set<String> bloombergTickers) {
+        Request request = service.createRequest("ReferenceDataRequest");
+        for (String bloombergTicker : bloombergTickers) {
+            request.getElement("securities").appendValue(bloombergTicker);
+        }
+        request.getElement("fields").appendValue("LAST_TRADEABLE_DT");
         return request;
     }
 
@@ -156,6 +165,43 @@ public class BloombergInterface {
         return bloombergTickers;
     }
 
+    private Map<String, String> processPropertyResponse(Request request) {
+        Map<String, String> properties = new HashMap<>();
+        try {
+            session.sendRequest(request, new CorrelationID(correlationId++));
+        } catch (IOException exception) {
+            exception.printStackTrace();
+        }
+        boolean continueToLoop = true;
+        while (continueToLoop) {
+            try {
+                Event event = session.nextEvent();
+                switch (event.eventType().intValue()) {
+                    case Event.EventType.Constants.RESPONSE:
+                        continueToLoop = false; //fall through
+                    case Event.EventType.Constants.PARTIAL_RESPONSE:
+                        MessageIterator iter = event.messageIterator();
+                        while (iter.hasNext()) {
+                            Message message = iter.next();
+                            Element responseData = message.getElement("securityData");
+                            for (int i = 0; i < responseData.numValues(); ++i) {
+                                Element securityData = responseData.getValueAsElement(i);
+                                String bloombergTicker = securityData.getElement("security").getValueAsString();
+                                String property = securityData.getElement("fieldData").getElement(0).getValueAsString();
+                                properties.put(bloombergTicker, property);
+                            }
+                        }
+                    default:
+                        break;
+                }
+            } catch (InterruptedException exception) {
+                exception.printStackTrace();
+            }
+        }
+        return properties;
+    }
+
+
     private Map<String, Chain.Market> processQuoteResponse(Request request) {
         Map<String, Chain.Market> markets = new HashMap<>();
         try {
@@ -175,7 +221,7 @@ public class BloombergInterface {
                         while (iter.hasNext()) {
                             Message message = iter.next();
                             Element responseData = message.getElement("securityData");
-                            String ticker = responseData.getElement("security").getValueAsString();
+                            String bloombergTicker = responseData.getElement("security").getValueAsString();
                             Element fieldData = responseData.getElement("fieldData").getValueAsElement();
                             double bidPrice;
                             try {
@@ -189,18 +235,8 @@ public class BloombergInterface {
                             } catch (NotFoundException exception) {
                                 askPrice = bidPrice;
                             }
-                            int bidSize;
-                            try {
-                                bidSize = fieldData.getElement("PX_BID").getValueAsInt32();
-                            } catch (NotFoundException exception) {
-                                bidSize = 0;
-                            }
-                            int askSize;
-                            try {
-                                askSize = fieldData.getElement("PX_BID").getValueAsInt32();
-                            } catch (NotFoundException exception) {
-                                askSize = 0;
-                            }
+                            Chain.Market market = new Chain.Market(bidPrice, askPrice, null, null);
+                            markets.put(bloombergTicker, market);
                         }
                     default:
                         break;
@@ -209,6 +245,7 @@ public class BloombergInterface {
                 exception.printStackTrace();
             }
         }
+        return markets;
     }
 
     private static String dateToBloombergString(LocalDate date) {

@@ -41,12 +41,12 @@ abstract class Chain {
     }
 
     static class Market {
-        final double bidPrice;
-        final double askPrice;
-        final int bidSize;
-        final int askSize;
+        final Double bidPrice;
+        final Double askPrice;
+        final Integer bidSize;
+        final Integer askSize;
 
-        Market(double bidPrice, double askPrice, int bidSize, int askSize) {
+        Market(Double bidPrice, Double askPrice, Integer bidSize, Integer askSize) {
             this.bidPrice = bidPrice;
             this.askPrice = askPrice;
             this.bidSize = bidSize;

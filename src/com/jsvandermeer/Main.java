@@ -8,10 +8,7 @@ import java.nio.file.Paths;
 import java.time.LocalDate;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 import static java.time.temporal.ChronoUnit.DAYS;
 
@@ -35,7 +32,12 @@ public class Main {
 //        DataLoader.loadOptionsFromLocal();
 
         BloombergInterface bloombergInterface = BloombergInterface.getInstance();
-        bloombergInterface.retrieveFutureLines(startLocalDate, endLocalDate, Utils.Underlier.VIX);
+        Set<DataInterface.FutureLine> futureLines = bloombergInterface.retrieveFutureLines(startLocalDate,
+                endLocalDate, Utils.Underlier.VIX);
+
+        for (DataInterface.FutureLine futureLine : futureLines) {
+            System.out.println(futureLine.toString());
+        }
 
 
 //        History history = new History(startDate, endDate, "jdbc:sqlite:C:\\Users\\Jacob\\Dropbox\\Code\\milton\\history.db");

@@ -1,9 +1,6 @@
 package com.jsvandermeer;
 
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.PreparedStatement;
-import java.sql.SQLException;
+import java.sql.*;
 import java.util.Collection;
 import java.util.List;
 
@@ -46,10 +43,26 @@ public class DataInterface {
                 preparedStatement.setDouble(3, optionLine.strike);
                 preparedStatement.setBoolean(4, optionLine.isCall);
                 preparedStatement.setString(5, optionLine.asOf);
-                preparedStatement.setDouble(6, optionLine.bidPrice);
-                preparedStatement.setDouble(7, optionLine.askPrice);
-                preparedStatement.setInt(8, optionLine.bidSize);
-                preparedStatement.setInt(9, optionLine.askSize);
+                if (optionLine.bidPrice == null) {
+                    preparedStatement.setNull(6, Types.REAL);
+                } else {
+                    preparedStatement.setDouble(6, optionLine.bidPrice);
+                }
+                if (optionLine.askPrice == null) {
+                    preparedStatement.setNull(7, Types.REAL);
+                } else {
+                    preparedStatement.setDouble(7, optionLine.askPrice);
+                }
+                if (optionLine.bidSize == null) {
+                    preparedStatement.setNull(8, Types.INTEGER);
+                } else {
+                    preparedStatement.setInt(8, optionLine.bidSize);
+                }
+                if (optionLine.askSize == null) {
+                    preparedStatement.setNull(9, Types.INTEGER);
+                } else {
+                    preparedStatement.setInt(9, optionLine.askSize);
+                }
 
                 preparedStatement.executeUpdate();
                 counter++;
@@ -74,31 +87,26 @@ public class DataInterface {
                 preparedStatement.setString(1, futureLine.underlier);
                 preparedStatement.setString(2, futureLine.expiry);
                 preparedStatement.setString(3, futureLine.asOf);
-                preparedStatement.setDouble(4, futureLine.bidPrice);
-                preparedStatement.setDouble(5, futureLine.askPrice);
-                preparedStatement.setInt(6, futureLine.bidSize);
-                preparedStatement.setInt(7, futureLine.askSize);
-
-                preparedStatement.executeUpdate();
-            }
-            connection.commit();
-        } catch (SQLException exception) {
-            exception.printStackTrace();
-        }
-    }
-
-    void insertForwards(Collection<ForwardLine> forwardLines) {
-        String tableStatement = "CREATE TABLE IF NOT EXISTS forwards (underlier TEXT, expiry TEXT, as_of TEXT, " +
-                "forward REAL) PRIMARY KEY (underlier, expiry, as_of)";
-        String insertStatement = "INSERT INTO forwards(underlier, expiry, as_of, forward) VALUES(?, ?, ?, ?)";
-        try {
-            connection.createStatement().executeUpdate(tableStatement);
-            for (ForwardLine forwardLine : forwardLines) {
-                PreparedStatement preparedStatement = connection.prepareStatement(insertStatement);
-                preparedStatement.setString(1, forwardLine.underlier);
-                preparedStatement.setString(2, forwardLine.expiry);
-                preparedStatement.setString(3, forwardLine.asOf);
-                preparedStatement.setDouble(4, forwardLine.forward);
+                if (futureLine.bidPrice == null) {
+                    preparedStatement.setNull(4, Types.REAL);
+                } else {
+                    preparedStatement.setDouble(4, futureLine.bidPrice);
+                }
+                if (futureLine.askPrice == null) {
+                    preparedStatement.setNull(5, Types.REAL);
+                } else {
+                    preparedStatement.setDouble(5, futureLine.askPrice);
+                }
+                if (futureLine.bidSize == null) {
+                    preparedStatement.setNull(6, Types.INTEGER);
+                } else {
+                    preparedStatement.setInt(6, futureLine.bidSize);
+                }
+                if (futureLine.askSize == null) {
+                    preparedStatement.setNull(7, Types.INTEGER);
+                } else {
+                    preparedStatement.setInt(7, futureLine.askSize);
+                }
 
                 preparedStatement.executeUpdate();
             }
@@ -112,56 +120,49 @@ public class DataInterface {
         final String underlier;
         final String expiry;
         final String asOf;
+        final Double bidPrice;
+        final Double askPrice;
+        final Integer bidSize;
+        final Integer askSize;
 
-        Line(String underlier, String expiry, String asOf) {
+        Line(String underlier, String expiry, String asOf, Double bidPrice, Double askPrice, Integer bidSize,
+             Integer askSize) {
             this.underlier = underlier;
             this.expiry = expiry;
             this.asOf = asOf;
+            this.bidPrice = bidPrice;
+            this.askPrice = askPrice;
+            this.bidSize = bidSize;
+            this.askSize = askSize;
         }
     }
 
     static class OptionLine extends Line {
         final double strike;
         final boolean isCall;
-        final double bidPrice;
-        final double askPrice;
-        final int bidSize;
-        final int askSize;
 
-        OptionLine (String underlier, String expiry, double strike, boolean isCall, String asOf,
-                           double bidPrice, double askPrice, int bidSize, int askSize) {
-            super(underlier, expiry, asOf);
+        OptionLine (String ticker, String expiry, double strike, boolean isCall, String asOf,
+                           Double bidPrice, Double askPrice, Integer bidSize, Integer askSize) {
+            super(ticker, expiry, asOf, bidPrice, askPrice, bidSize, askSize);
             this.strike = strike;
             this.isCall = isCall;
-            this.bidPrice = bidPrice;
-            this.askPrice = askPrice;
-            this.bidSize = bidSize;
-            this.askSize = askSize;
+        }
+
+        @Override public String toString() {
+            return "(" + underlier + ", " + expiry + ", " + strike + ", " + isCall + ", " + asOf + ", " + bidPrice +
+                    ", " + askPrice + ", " + bidSize + ", " + askSize + ")";
         }
     }
 
     static class FutureLine extends Line {
-        final double bidPrice;
-        final double askPrice;
-        final int bidSize;
-        final int askSize;
-
-        FutureLine(String underlier, String expiry, String asOf, double bidPrice, double askPrice, int bidSize,
-                   int askSize) {
-            super(underlier, expiry, asOf);
-            this.bidPrice = bidPrice;
-            this.askPrice = askPrice;
-            this.bidSize = bidSize;
-            this.askSize = askSize;
+        FutureLine(String ticker, String expiry, String asOf, Double bidPrice, Double askPrice, Integer bidSize,
+                   Integer askSize) {
+            super(ticker, expiry, asOf, bidPrice, askPrice, bidSize, askSize);
         }
-    }
 
-    static class ForwardLine extends Line {
-        final double forward;
-
-        ForwardLine(String underlier, String expiry, String asOf, double forward) {
-            super(underlier, expiry, asOf);
-            this.forward = forward;
+        @Override public String toString() {
+            return "(" + underlier + ", " + expiry + ", " + asOf + ", " + bidPrice + ", " + askPrice + ", " +
+                    bidSize + ", " + askSize + ")";
         }
     }
 }
