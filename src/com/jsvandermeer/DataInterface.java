@@ -28,9 +28,10 @@ public class DataInterface {
     }
 
     void insertOptions(Collection<OptionLine> optionLines) {
-        String tableStatement = "CREATE TABLE IF NOT EXISTS options (underlier TEXT, expiry TEXT, strike REAL, " +
-                "is_call BOOLEAN, as_of TEXT, bid_price REAL, ask_price REAL, bid_size INTEGER, ask_size INTEGER) " +
-                "PRIMARY KEY (underlier, expiry, strike, is_call, as_of)";
+        String tableStatement = "CREATE TABLE IF NOT EXISTS options (underlier TEXT NOT NULL, expiry TEXT NOT NULL, " +
+                "strike REAL NOT NULL, is_call BOOLEAN NOT NULL, as_of TEXT NOT NULL, bid_price REAL, " +
+                "ask_price REAL, bid_size INTEGER, ask_size INTEGER, PRIMARY KEY (underlier, expiry, strike, " +
+                "is_call, as_of))";
         String insertStatement = "INSERT INTO options(underlier, expiry, strike, is_call, as_of, " +
                 "bid_price, ask_price, bid_size, ask_size) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)";
         try {
@@ -75,9 +76,9 @@ public class DataInterface {
     }
 
     void insertFutures(Collection<FutureLine> futureLines) {
-        String tableStatement = "CREATE TABLE IF NOT EXISTS futures (underlier TEXT, expiry TEXT, as_of TEXT, " +
-                "bid_price REAL, ask_price REAL, bid_size INTEGER, ask_size INTEGER) PRIMARY KEY (underlier, " +
-                "expiry, as_of)";
+        String tableStatement = "CREATE TABLE IF NOT EXISTS futures (underlier TEXT NOT NULL, expiry TEXT NOT NULL, " +
+                "as_of TEXT NOT NULL, bid_price REAL, ask_price REAL, bid_size INTEGER, ask_size INTEGER, " +
+                "PRIMARY KEY (underlier, expiry, as_of))";
         String insertStatement = "INSERT INTO futures(underlier, expiry, as_of, bid_price, ask_price, bid_size, " +
                 "ask_size) VALUES(?, ?, ?, ?, ?, ?, ?)";
         try {

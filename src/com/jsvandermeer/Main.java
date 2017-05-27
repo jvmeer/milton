@@ -28,16 +28,10 @@ public class Main {
         System.out.println(interval);
 
 
-//        DataLoader.retrieveFilesFromLiveVol("order_000001515/item_000002548");
-//        DataLoader.loadOptionsFromLocal();
+        DataLoader.retrieveFilesFromLiveVol("order_000002004/item_000003163");
+        DataLoader.loadOptionsFromLocal();
 
-        BloombergInterface bloombergInterface = BloombergInterface.getInstance();
-        Set<DataInterface.FutureLine> futureLines = bloombergInterface.retrieveFutureLines(startLocalDate,
-                endLocalDate, Utils.Underlier.VIX);
-
-        for (DataInterface.FutureLine futureLine : futureLines) {
-            System.out.println(futureLine.toString());
-        }
+        DataLoader.loadFuturesFromBloomberg(startLocalDate, endLocalDate);
 
 
 //        History history = new History(startDate, endDate, "jdbc:sqlite:C:\\Users\\Jacob\\Dropbox\\Code\\milton\\history.db");
