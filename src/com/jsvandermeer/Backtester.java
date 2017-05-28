@@ -4,7 +4,7 @@ import java.sql.*;
 import java.time.ZonedDateTime;
 import java.util.*;
 
-import static com.jsvandermeer.Utils.dateToString;
+import static com.jsvandermeer.Utils.zonedDateTimeToString;
 
 /**
  * Created by Jacob on 4/4/2017.
@@ -23,12 +23,12 @@ public class Backtester {
 
     void populateStrikeHistory(Utils.Underlier indexUnderlier, Utils.Underlier volUnderlier) {
         List<ZonedDateTime> asOfs = new ArrayList<>();
-        String asOfsStatement = "select distinct as_of from vix_futures where as_of>=" + dateToString(startDate) +
-                " and as_of <" + dateToString(endDate);
+        String asOfsStatement = "select distinct as_of from vix_futures where as_of>=" + zonedDateTimeToString(startDate) +
+                " and as_of <" + zonedDateTimeToString(endDate);
         try {
             ResultSet asOfsSet = connection.createStatement().executeQuery(asOfsStatement);
             while (asOfsSet.next()) {
-                asOfs.add(Utils.stringToDate(asOfsSet.getString("as_of")));
+                asOfs.add(Utils.stringToZonedDateTime(asOfsSet.getString("as_of")));
             }
         } catch (SQLException exception) {
             exception.printStackTrace();
@@ -46,7 +46,7 @@ public class Backtester {
                     for (ZonedDateTime futureExpiry : futureExpiries) {
                         String futureStripStatement = "select strike, is_call, bid_price, ask_price, bid_size, " +
                                 "ask_size from options where underlier=" + volUnderlier.ticker + " and expiry=" +
-                                Utils.dateToString(futureExpiry) + " and as_of=" + Utils.dateToString(asOf);
+                                Utils.zonedDateTimeToString(futureExpiry) + " and as_of=" + Utils.zonedDateTimeToString(asOf);
                         ResultSet futureStripSet = null;
                         try {
                             futureStripSet = connection.createStatement().executeQuery(futureStripStatement);
@@ -55,8 +55,8 @@ public class Backtester {
                         }
                         futureStrips.add(new OptionChain.Strip(futureExpiry, futureStripSet));
                         String futureStatement = "select bid_price, ask_price, bid_size, ask_size from futures where " +
-                                "underlier=" + volUnderlier.ticker + " and expiry=" + Utils.dateToString(futureExpiry) +
-                                " and as_of=" + Utils.dateToString(asOf);
+                                "underlier=" + volUnderlier.ticker + " and expiry=" + Utils.zonedDateTimeToString(futureExpiry) +
+                                " and as_of=" + Utils.zonedDateTimeToString(asOf);
                         ResultSet futureSet = null;
                         try {
                             futureSet = connection.createStatement().executeQuery(futureStatement);
@@ -80,7 +80,7 @@ public class Backtester {
                         for (ZonedDateTime backExpiry : backExpiries) {
                             String frontStripStatement = "select strike, is_call, bid_price, ask_price, bid_size, " +
                                     "ask_size from options where underlier =" + indexUnderlier.ticker + " and expiry=" +
-                                    Utils.dateToString(frontExpiry) + " and as_of=" + Utils.dateToString(asOf);
+                                    Utils.zonedDateTimeToString(frontExpiry) + " and as_of=" + Utils.zonedDateTimeToString(asOf);
                             ResultSet frontStripSet = null;
                             try {
                                 frontStripSet = connection.createStatement().executeQuery(frontStripStatement);
@@ -90,7 +90,7 @@ public class Backtester {
                             OptionChain.Strip frontStrip = new OptionChain.Strip(frontExpiry, frontStripSet);
                             String backStripStatement = "select strike, is_call, bid_price, ask_price, bid_size, " +
                                     "ask_size from options where underlier =" + indexUnderlier.ticker + " and expiry=" +
-                                    Utils.dateToString(backExpiry) + " and as_of=" + Utils.dateToString(asOf);
+                                    Utils.zonedDateTimeToString(backExpiry) + " and as_of=" + Utils.zonedDateTimeToString(asOf);
                             ResultSet backStripSet = null;
                             try {
                                 backStripSet = connection.createStatement().executeQuery(frontStripStatement);
@@ -100,8 +100,8 @@ public class Backtester {
                             OptionChain.Strip backStrip = new OptionChain.Strip(frontExpiry, frontStripSet);
 
                             String frontForwardStatement = "select forward from forwards where underlier=" +
-                                    indexUnderlier.ticker + " and expiry=" + Utils.dateToString(frontExpiry) + " and " +
-                                    "as_of=" + Utils.dateToString(asOf);
+                                    indexUnderlier.ticker + " and expiry=" + Utils.zonedDateTimeToString(frontExpiry) + " and " +
+                                    "as_of=" + Utils.zonedDateTimeToString(asOf);
                             double frontForward = 0.0;
                             try {
                                 ResultSet frontForwardSet = connection.createStatement().executeQuery(frontForwardStatement);
@@ -113,8 +113,8 @@ public class Backtester {
                             }
 
                             String backForwardStatement = "select forward from forwards where underlier=" +
-                                    indexUnderlier.ticker + " and expiry=" + Utils.dateToString(backExpiry) + " and " +
-                                    "as_of=" + Utils.dateToString(asOf);
+                                    indexUnderlier.ticker + " and expiry=" + Utils.zonedDateTimeToString(backExpiry) + " and " +
+                                    "as_of=" + Utils.zonedDateTimeToString(asOf);
                             double backForward = 0.0;
                             try {
                                 ResultSet backForwardSet = connection.createStatement().executeQuery(frontForwardStatement);
@@ -139,9 +139,9 @@ public class Backtester {
                                 PreparedStatement preparedStatement = connection.prepareStatement(replicationStatement);
                                 preparedStatement.setString(1, indexUnderlier.ticker);
                                 preparedStatement.setString(2, volUnderlier.ticker);
-                                preparedStatement.setString(3, Utils.dateToString(frontExpiry));
-                                preparedStatement.setString(4, Utils.dateToString(backExpiry));
-                                preparedStatement.setString(5, Utils.dateToString(asOf));
+                                preparedStatement.setString(3, Utils.zonedDateTimeToString(frontExpiry));
+                                preparedStatement.setString(4, Utils.zonedDateTimeToString(backExpiry));
+                                preparedStatement.setString(5, Utils.zonedDateTimeToString(asOf));
                                 preparedStatement.setDouble(6, replication.indexMidStrike());
                                 preparedStatement.setDouble(7, replication.vixBidStrike());
                                 preparedStatement.setDouble(8, replication.vixAskStrike());

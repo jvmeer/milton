@@ -6,16 +6,10 @@ import org.apache.commons.net.ftp.FTPClient;
 import org.apache.commons.net.ftp.FTPFile;
 
 import java.io.*;
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.PreparedStatement;
-import java.sql.SQLException;
 import java.time.LocalDate;
-import java.time.ZonedDateTime;
 import java.util.*;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
-import java.util.zip.ZipInputStream;
 
 /**
  * Created by Jacob on 4/1/2017.
@@ -29,7 +23,7 @@ public class DataLoader {
 //    static void loadOptionsFromBloomberg(ZonedDateTime startDate, ZonedDateTime endDate, String[] underliers) {
 //        Session session = createSession();
 //        Service service = session.getService("//blp/refdata");
-//        ZonedDateTime asOf = Utils.stringToDate("20170103");
+//        ZonedDateTime asOf = Utils.stringToZonedDateTime("20170103");
 //
 //        Map<String, OptionChain> chains = new HashMap<>();
 //
@@ -76,8 +70,8 @@ public class DataLoader {
 //            for (Map.Entry<ZonedDateTime, Double> entry : forwards.entrySet()) {
 //                try {
 //                    PreparedStatement preparedStatement = connection.prepareStatement(insertStatement);
-//                    preparedStatement.setString(1, Utils.dateToString(entry.getKey()));
-//                    preparedStatement.setString(2, Utils.dateToString(dateCursor));
+//                    preparedStatement.setString(1, Utils.zonedDateTimeToString(entry.getKey()));
+//                    preparedStatement.setString(2, Utils.zonedDateTimeToString(dateCursor));
 //                    preparedStatement.setDouble(3, entry.getValue());
 //                    preparedStatement.executeUpdate();
 //                } catch (SQLException exception) {
@@ -157,7 +151,7 @@ public class DataLoader {
 //        request.getElement("fields").appendValue("OPT_CHAIN");
 //        Element asOfOverride = request.getElement("overrides").appendElement();
 //        asOfOverride.setElement("fieldId","SINGLE_DATE_OVERRIDE");
-//        asOfOverride.setElement("value", Utils.dateToString(asOf));
+//        asOfOverride.setElement("value", Utils.zonedDateTimeToString(asOf));
 //        Element identifierOverride = request.getElement("overrides").appendElement();
 //        identifierOverride.setElement("fieldId", "DISPLAY_ID_BB_GLOBAL_OVERRIDE");
 //        identifierOverride.setElement("value", "False");
@@ -187,8 +181,8 @@ public class DataLoader {
 //        fields.appendValue("PX_ASK");
 //        fields.appendValue("BID_SIZE");
 //        fields.appendValue("ASK_SIZE");
-//        request.set("startDate", Utils.dateToString(asOf));
-//        request.set("endDate", Utils.dateToString(asOf));
+//        request.set("startDate", Utils.zonedDateTimeToString(asOf));
+//        request.set("endDate", Utils.zonedDateTimeToString(asOf));
 //        return request;
 //    }
 //
@@ -198,7 +192,7 @@ public class DataLoader {
 //        request.getElement("fields").appendValue("IMP_FORWARD_PRICE");
 //        Element asOfOverride = request.getElement("overrides").appendElement();
 //        asOfOverride.setElement("fieldId","REFERENCE_DATE");
-//        asOfOverride.setElement("value",Utils.dateToString(asOf));
+//        asOfOverride.setElement("value",Utils.zonedDateTimeToString(asOf));
 //        Element axisOverride = request.getElement("overrides").appendElement();
 //        axisOverride.setElement("fieldId", "IVOL_SURFACE_AXIS_TYPE");
 //        axisOverride.setElement("value", "Listed/Pct");
@@ -312,19 +306,39 @@ public class DataLoader {
 //            for (int i = 0; i < forwardsData.numValues(); ++i) {
 //                Element forward = forwardsData.getValueAsElement(i);
 //                if (i == 0) spot = forward.getElement("Implied Forward Price").getValueAsFloat64();
-//                forwards.put(Utils.stringToDate(forward.getElementAsString("Expiration Date")),
+//                forwards.put(Utils.stringToZonedDateTime(forward.getElementAsString("Expiration Date")),
 //                        forward.getElementAsFloat64("Implied Forward Price"));
 //            }
 //            System.out.println(message.toString());
 //        }
 //    }
+//
+//
+//    private static void printResponse(Event event) {
+//        MessageIterator iter = event.messageIterator();
+//        while (iter.hasNext()) {
+//            System.out.println(iter.next().toString());
+//        }
+//    }
 
 
-    private static void printResponse(Event event) {
-        MessageIterator iter = event.messageIterator();
-        while (iter.hasNext()) {
-            System.out.println(iter.next().toString());
+    static void loadHolidays() {
+        File file = new File(Utils.HOLIDAY_CAL_LOCAL_FILE_PATH);
+        DataInterface dataInterface = DataInterface.getInstance();
+        Set<LocalDate> holidays = new HashSet<>();
+        try {
+            BufferedReader bufferedReader = new BufferedReader(new FileReader(file));
+            while (true) {
+                String line = bufferedReader.readLine();
+                if (line == null) break;
+                LocalDate date = Utils.stringToLocalDate(line);
+                holidays.add(date);
+            }
+            bufferedReader.close();
+        } catch (IOException exception) {
+            exception.printStackTrace();
         }
+        dataInterface.insertHolidays(holidays);
     }
 
     static void loadFuturesFromBloomberg(LocalDate startDate, LocalDate endDate) {
@@ -335,18 +349,15 @@ public class DataLoader {
         dataInterface.insertFutures(futureLines);
     }
 
-
-
-
     static void loadOptionsFromLocal() {
         Map<String, Utils.Underlier> underlierMap = Utils.underlierMap();
-        File localDirectory = new File(Utils.LOCAL_FILES_PATH);
+        File localDirectory = new File(Utils.LIVE_VOL_LOCAL_DIRECTORY);
         DataInterface dataInterface = DataInterface.getInstance();
         for (File file : localDirectory.listFiles()) {
+            System.out.println(file.getName());
             Set<DataInterface.OptionLine> optionLines = new HashSet<>();
             try {
                 ZipFile zipFile = new ZipFile(file);
-                String name = file.getName();
                 ZipEntry zipEntry = zipFile.entries().nextElement();
                 InputStream inputStream = zipFile.getInputStream(zipEntry);
                 BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(inputStream));
@@ -401,7 +412,7 @@ public class DataLoader {
             for (FTPFile ftpFile : ftpFiles) {
                 if (ftpFile.isFile()) {
                     String remoteName = ftpFile.getName();
-                    String localName = Utils.LOCAL_FILES_PATH + remoteName;
+                    String localName = Utils.LIVE_VOL_LOCAL_DIRECTORY + remoteName;
                     OutputStream outputStream = new FileOutputStream(new File(localName));
                     ftpClient.retrieveFile(remoteName, outputStream);
                     outputStream.close();

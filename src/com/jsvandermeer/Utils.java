@@ -1,6 +1,6 @@
 package com.jsvandermeer;
 
-import java.time.Month;
+import java.time.LocalDate;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
@@ -51,19 +51,33 @@ public class Utils {
     static final String LIVE_VOL_ADDRESS = "ftp.datashop.livevol.com";
     static final String LIVE_VOL_USERNAME = "jsvmeer@gmail.com";
     static final String LIVE_VOL_PASSWORD = "courageandhonor";
-    static final String DATABASE_PATH = "jdbc:sqlite:C:\\Users\\Jacob\\Dropbox\\Code\\milton\\historical_data.db";
-    static final String LOCAL_FILES_PATH = "C:\\Users\\Jacob\\Dropbox\\Code\\milton\\live_vol_files\\";
+    static final String LIVE_VOL_LOCAL_DIRECTORY = "C:\\Users\\Jacob\\Dropbox\\Code\\milton\\live_vol_files\\";
+
+    static final String HOLIDAY_CAL_LOCAL_FILE_PATH = "C:\\Users\\Jacob\\Dropbox\\Code\\milton\\holidays.csv";
+
+    static final String DATABASE_PATH = "jdbc:sqlite:C:\\Users\\Jacob\\Dropbox\\Code\\milton\\green.db";
+
 
     static final int VIX_DAYS = 30;
 
-    static String dateToString(ZonedDateTime date) {
+    static String zonedDateTimeToString(ZonedDateTime date) {
         DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern("uuuu'-'MM'-'dd'T'HH':'mm':'ss'['VV']'");
         return date.format(dateTimeFormatter);
     }
 
-    static ZonedDateTime stringToDate(String date) {
+    static ZonedDateTime stringToZonedDateTime(String date) {
         DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern("uuuu'-'MM'-'dd'T'HH':'mm':'ss'['VV']'");
         return ZonedDateTime.parse(date, dateTimeFormatter);
+    }
+
+    static String localDateToString(LocalDate date) {
+        DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern("uuuu'-'MM'-'dd");
+        return date.format(dateTimeFormatter);
+    }
+
+    static LocalDate stringToLocalDate(String date) {
+        DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern("uuuu'-'MM'-'dd");
+        return LocalDate.parse(date, dateTimeFormatter);
     }
 
     static ZonedDateTime addCalendarDays(ZonedDateTime date, int days) {
@@ -81,7 +95,7 @@ public class Utils {
     public static ZonedDateTime expiryFromTicker(String ticker) {
         String[] tokens = ticker.split(" ");
         String[] monthDayYear = tokens[2].split("/");
-        return stringToDate(monthDayYear[2] + monthDayYear[0] + monthDayYear[1]);
+        return stringToZonedDateTime(monthDayYear[2] + monthDayYear[0] + monthDayYear[1]);
     }
 
 

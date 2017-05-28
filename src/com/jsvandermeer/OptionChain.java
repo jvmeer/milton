@@ -1,16 +1,13 @@
 package com.jsvandermeer;
 
 
-import com.bloomberglp.blpapi.Message;
-import com.bloomberglp.blpapi.MessageIterator;
-
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.ZonedDateTime;
 import java.util.*;
 
-import static com.jsvandermeer.Utils.dateToString;
+import static com.jsvandermeer.Utils.zonedDateTimeToString;
 
 /**
  * Created by Jacob on 3/18/2017.
@@ -26,8 +23,8 @@ class OptionChain extends Chain {
         try {
             for (ZonedDateTime expiry : expiries) {
                 String stripQuery = "select strike, is_call, bid_price, ask_price, bid_size, ask_size from options " +
-                        "where underlier=" + underlier + " and as_of=" + dateToString(asOf) + " and expiry=" +
-                        dateToString(expiry);
+                        "where underlier=" + underlier + " and as_of=" + zonedDateTimeToString(asOf) + " and expiry=" +
+                        zonedDateTimeToString(expiry);
                 ResultSet stripSet = connection.createStatement().executeQuery(stripQuery);
                 Strip strip = new Strip(expiry, stripSet);
                 strips.put(expiry, strip);

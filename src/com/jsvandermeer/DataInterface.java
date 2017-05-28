@@ -1,6 +1,7 @@
 package com.jsvandermeer;
 
 import java.sql.*;
+import java.time.LocalDate;
 import java.util.Collection;
 import java.util.List;
 
@@ -27,6 +28,24 @@ public class DataInterface {
         return dataInterface;
     }
 
+    void insertHolidays(Collection<LocalDate> holidays) {
+        String tableStatement = "CREATE TABLE IF NOT EXISTS holidays (date TEXT NOT NULL PRIMARY KEY)";
+        String insertStatement = "INSERT INTO holidays(date) VALUES(?)";
+        try {
+            connection.createStatement().executeUpdate(tableStatement);
+            for (LocalDate holiday : holidays) {
+                PreparedStatement preparedStatement = connection.prepareStatement(insertStatement);
+                preparedStatement.setString(1, Utils.localDateToString(holiday));
+                preparedStatement.executeUpdate();
+            }
+            connection.commit();
+        } catch (SQLException exception) {
+            exception.printStackTrace();
+        }
+    }
+
+
+
     void insertOptions(Collection<OptionLine> optionLines) {
         String tableStatement = "CREATE TABLE IF NOT EXISTS options (underlier TEXT NOT NULL, expiry TEXT NOT NULL, " +
                 "strike REAL NOT NULL, is_call BOOLEAN NOT NULL, as_of TEXT NOT NULL, bid_price REAL, " +
@@ -36,7 +55,6 @@ public class DataInterface {
                 "bid_price, ask_price, bid_size, ask_size) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)";
         try {
             connection.createStatement().executeUpdate(tableStatement);
-            int counter = 1;
             for (OptionLine optionLine : optionLines) {
                 PreparedStatement preparedStatement = connection.prepareStatement(insertStatement);
                 preparedStatement.setString(1, optionLine.underlier);
@@ -66,8 +84,6 @@ public class DataInterface {
                 }
 
                 preparedStatement.executeUpdate();
-                counter++;
-                if (counter % 100 == 0) System.out.println(counter);
             }
             connection.commit();
         } catch (SQLException exception) {

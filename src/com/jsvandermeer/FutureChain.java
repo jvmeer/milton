@@ -7,7 +7,7 @@ import java.time.ZonedDateTime;
 import java.util.HashMap;
 import java.util.Map;
 
-import static com.jsvandermeer.Utils.dateToString;
+import static com.jsvandermeer.Utils.zonedDateTimeToString;
 
 /**
  * Created by Jacob on 4/8/2017.
@@ -21,7 +21,7 @@ public class FutureChain extends Chain {
         try {
             for (ZonedDateTime expiry : expiries) {
                 String futureQuery = "select bid_price, ask_price, bid_size, ask_size from futures where underlier=" +
-                        underlier + " and as_of=" + dateToString(asOf) + " and expiry=" + dateToString(expiry);
+                        underlier + " and as_of=" + zonedDateTimeToString(asOf) + " and expiry=" + zonedDateTimeToString(expiry);
                 ResultSet futureSet = connection.createStatement().executeQuery(futureQuery);
                 if (futureSet.next()) {
                     Market market = new Market(futureSet.getDouble("bid_price"),

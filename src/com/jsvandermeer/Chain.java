@@ -5,10 +5,9 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.ZonedDateTime;
 import java.util.NavigableSet;
-import java.util.SortedSet;
 import java.util.TreeSet;
 
-import static com.jsvandermeer.Utils.dateToString;
+import static com.jsvandermeer.Utils.zonedDateTimeToString;
 
 
 /**
@@ -26,10 +25,10 @@ abstract class Chain {
         expiries = new TreeSet<>();
         try {
             String expiriesQuery = "select distinct expiry from (select * from " + table + " where underlier=" +
-                    underlier + " and as_of=" + dateToString(asOf);
+                    underlier + " and as_of=" + zonedDateTimeToString(asOf);
             ResultSet expiriesSet = connection.createStatement().executeQuery(expiriesQuery);
             while (expiriesSet.next()) {
-                expiries.add(Utils.stringToDate(expiriesSet.getString("expiry")));
+                expiries.add(Utils.stringToZonedDateTime(expiriesSet.getString("expiry")));
             }
         } catch (SQLException exception) {
             exception.printStackTrace();
