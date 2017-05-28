@@ -3,6 +3,7 @@ package com.jsvandermeer;
 import java.sql.*;
 import java.time.LocalDate;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
 
 /**
@@ -44,7 +45,19 @@ public class DataInterface {
         }
     }
 
-
+    Collection<LocalDate> retrieveHolidays() {
+        Collection<LocalDate> holidays = new HashSet<>();
+        String selectStatement = "SELECT date FROM holidays";
+        try {
+            ResultSet resultSet = connection.createStatement().executeQuery(selectStatement);
+            while (resultSet.next()) {
+                holidays.add(Utils.stringToLocalDate(resultSet.getString("date")));
+            }
+        } catch (SQLException exception) {
+            exception.printStackTrace();
+        }
+        return holidays;
+    }
 
     void insertOptions(Collection<OptionLine> optionLines) {
         String tableStatement = "CREATE TABLE IF NOT EXISTS options (underlier TEXT NOT NULL, expiry TEXT NOT NULL, " +

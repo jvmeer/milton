@@ -1,9 +1,11 @@
 package com.jsvandermeer;
 
 
+import javax.xml.crypto.Data;
 import java.time.LocalDate;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.Collection;
 
 import static java.time.temporal.ChronoUnit.DAYS;
 
@@ -26,7 +28,14 @@ public class Main {
 //        DataLoader.retrieveFilesFromLiveVol("order_000002004/item_000003163");
 //        DataLoader.loadOptionsFromLocal();
 
-        DataLoader.loadHolidays();
+//        DataLoader.loadHolidays();
+
+        DataInterface dataInterface = DataInterface.getInstance();
+        Collection<LocalDate> holidays = dataInterface.retrieveHolidays();
+
+        for (LocalDate holiday: holidays) {
+            System.out.println(holiday.toString());
+        }
 
 //        DataLoader.loadFuturesFromBloomberg(startLocalDate, endLocalDate);
 
