@@ -29,7 +29,7 @@ public class History {
 
     void plotBases() {
         for (ZonedDateTime asOf : bases.keySet()) {
-            System.out.println(asOf.toString() + ": " + bases.get(asOf).basis);
+            System.out.println(Utils.zonedDateTimeToString(asOf) + ": " + bases.get(asOf).basis);
         }
     }
 

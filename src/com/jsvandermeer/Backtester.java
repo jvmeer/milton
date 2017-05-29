@@ -39,21 +39,30 @@ public class Backtester {
                         indexOptionChain.getExpiries().subSet(volExpiry.minusDays(Utils.REPLICATION_DAY_TOLERANCE),
                                 true, volExpiry.plusDays(Utils.REPLICATION_DAY_TOLERANCE), true);
                 ZonedDateTime indexBackExpiry = volExpiry.plusDays(Utils.VIX_DAYS);
-                for (ZonedDateTime indexFrontExpiry : indexFrontExpiries) {
-                    Replication.Specification specification = new Replication.Specification(indexUnderlier,
-                            volUnderlier, volExpiry, indexFrontExpiry, indexBackExpiry);
-                    OptionChain.Strip volStrip = volOptionChain.getStrip(volExpiry);
-                    OptionChain.Strip indexFrontStrip = indexOptionChain.getStrip(indexFrontExpiry);
-                    OptionChain.Strip indexBackStrip = indexOptionChain.getStrip(indexBackExpiry);
-                    Chain.Market volFuture = volFutureChain.getFuture(volExpiry);
-                    Replication replication = new Replication(specification, asOf, volStrip, indexFrontStrip,
-                            indexBackStrip, volFuture);
-                    if (histories.containsKey(specification)) {
-                        histories.get(specification).addBasis(asOf, replication.calculateBasis());
-                    } else {
-                        History history = new History(specification);
-                        history.addBasis(asOf, replication.calculateBasis());
-                        histories.put(specification, history);
+                if (indexOptionChain.getExpiries().contains(indexBackExpiry)) {
+                    for (ZonedDateTime indexFrontExpiry : indexFrontExpiries) {
+
+                        ZonedDateTime test = Utils.stringToZonedDateTime("2017-06-16T09:30:00[America/New_York]");
+                        if (indexFrontExpiry.equals(test)) {
+                            System.out.println("Jun");
+                        }
+
+
+                        Replication.Specification specification = new Replication.Specification(indexUnderlier,
+                                volUnderlier, indexFrontExpiry, indexBackExpiry, volExpiry);
+                        OptionChain.Strip indexFrontStrip = indexOptionChain.getStrip(indexFrontExpiry);
+                        OptionChain.Strip indexBackStrip = indexOptionChain.getStrip(indexBackExpiry);
+                        OptionChain.Strip volStrip = volOptionChain.getStrip(volExpiry);
+                        Chain.Market volFuture = volFutureChain.getFuture(volExpiry);
+                        Replication replication = new Replication(specification, asOf, indexFrontStrip,
+                                indexBackStrip, volStrip, volFuture);
+                        if (histories.containsKey(specification)) {
+                            histories.get(specification).addBasis(asOf, replication.calculateBasis());
+                        } else {
+                            History history = new History(specification);
+                            history.addBasis(asOf, replication.calculateBasis());
+                            histories.put(specification, history);
+                        }
                     }
                 }
             }

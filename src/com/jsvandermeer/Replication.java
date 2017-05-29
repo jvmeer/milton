@@ -16,8 +16,8 @@ public class Replication implements Comparable<Replication> {
     private final OptionChain.Strip indexBackStrip;
     private final Chain.Market volFuture;
 
-    Replication(Specification specification, ZonedDateTime asOf, OptionChain.Strip volStrip,
-                OptionChain.Strip indexFrontStrip, OptionChain.Strip indexBackStrip, Chain.Market volFuture) {
+    Replication(Specification specification, ZonedDateTime asOf, OptionChain.Strip indexFrontStrip,
+                OptionChain.Strip indexBackStrip, OptionChain.Strip volStrip, Chain.Market volFuture) {
         this.specification = specification;
         this.asOf = asOf;
         this.volStrip = volStrip;
@@ -33,31 +33,18 @@ public class Replication implements Comparable<Replication> {
     @Override public boolean equals(Object other) {
         if (!(other instanceof Replication)) return false;
         Replication otherReplication = (Replication) other;
-        return (specification.indexFrontExpiry.equals(otherReplication.specification.indexFrontExpiry) &&
-                specification.indexBackExpiry.equals(otherReplication.specification.indexBackExpiry));
+        return (specification.equals(otherReplication.specification));
     }
 
     @Override public int hashCode() {
-        return specification.indexFrontExpiry.hashCode() * specification.indexBackExpiry.hashCode();
+        return specification.hashCode();
     }
 
     @Override public int compareTo(Replication other) {
-        if (specification.indexFrontExpiry.isBefore(other.specification.indexFrontExpiry)) {
-            return -1;
-        } else if (specification.indexFrontExpiry.equals(other.specification.indexFrontExpiry)) {
-            if (specification.indexBackExpiry.isBefore(other.specification.indexBackExpiry)) {
-                return -1;
-            } else if (specification.indexBackExpiry.equals(other.specification.indexBackExpiry)) {
-                return 0;
-            } else {
-                return 1;
-            }
-        } else {
-            return 1;
-        }
+        return specification.compareTo(other.specification);
     }
 
-    static class Specification {
+    static class Specification implements Comparable<Specification> {
         final Utils.Underlier indexUnderlier;
         final Utils.Underlier volUnderlier;
         final ZonedDateTime volExpiry;
@@ -71,6 +58,33 @@ public class Replication implements Comparable<Replication> {
             this.volExpiry = volExpiry;
             this.indexFrontExpiry = indexFrontExpiry;
             this.indexBackExpiry = indexBackExpiry;
+        }
+
+        @Override public boolean equals(Object other) {
+            if (!(other instanceof Specification)) return false;
+            Specification otherSpecification = (Specification) other;
+            return (indexFrontExpiry.equals(otherSpecification.indexFrontExpiry) &&
+                    indexBackExpiry.equals(otherSpecification.indexBackExpiry));
+        }
+
+        @Override public int hashCode() {
+            return indexFrontExpiry.hashCode() * indexBackExpiry.hashCode();
+        }
+
+        @Override public int compareTo(Specification other) {
+            if (indexFrontExpiry.isBefore(other.indexFrontExpiry)) {
+                return -1;
+            } else if (indexFrontExpiry.equals(other.indexFrontExpiry)) {
+                if (indexBackExpiry.isBefore(other.indexBackExpiry)) {
+                    return -1;
+                } else if (indexBackExpiry.equals(other.indexBackExpiry)) {
+                    return 0;
+                } else {
+                    return 1;
+                }
+            } else {
+                return 1;
+            }
         }
     }
 

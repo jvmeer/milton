@@ -32,6 +32,7 @@ public class Main {
         Backtester backtester = new Backtester(startLocalDate, endLocalDate, Utils.Underlier.SPX, Utils.Underlier.VIX);
         Map<Replication.Specification, History> histories = backtester.generateHistories();
         for(Replication.Specification specification : histories.keySet()) {
+            System.out.println(Utils.zonedDateTimeToString(specification.indexBackExpiry));
             histories.get(specification).plotBases();
         }
 
