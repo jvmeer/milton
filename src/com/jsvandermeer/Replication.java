@@ -9,69 +9,45 @@ import java.util.SortedSet;
  * Created by Jacob on 3/26/2017.
  */
 public class Replication implements Comparable<Replication> {
-    final static int DAY_TOLERANCE = 3;
-    String futureUnderlier;
-    String forwardUnderlier;
-    ZonedDateTime asOf;
-    SortedSet<ZonedDateTime> futureExpiries;
-    ZonedDateTime frontExpiry;
-    ZonedDateTime backExpiry;
-    SortedSet<OptionChain.Strip> futureStrips;
-    OptionChain.Strip frontStrip;
-    OptionChain.Strip backStrip;
-    Map<ZonedDateTime, Chain.Market> futures;
-    double frontForward;
-    double backForward;
+    private final Specification specification;
+    private final ZonedDateTime asOf;
+    private final OptionChain.Strip volStrip;
+    private final OptionChain.Strip indexFrontStrip;
+    private final OptionChain.Strip indexBackStrip;
+    private final Chain.Market volFuture;
 
-    Replication(String forwardUnderlier, String futureUnderlier, ZonedDateTime asOf,
-                SortedSet<ZonedDateTime> futureExpiries, ZonedDateTime frontExpiry, ZonedDateTime backExpiry,
-                SortedSet<OptionChain.Strip> futureStrips, OptionChain.Strip frontStrip, OptionChain.Strip backStrip,
-                Map<ZonedDateTime, Chain.Market> futures, double frontForward, double backForward) {
-        this.forwardUnderlier = forwardUnderlier;
-        this.futureUnderlier = futureUnderlier;
+    Replication(Specification specification, ZonedDateTime asOf, OptionChain.Strip volStrip,
+                OptionChain.Strip indexFrontStrip, OptionChain.Strip indexBackStrip, Chain.Market volFuture) {
+        this.specification = specification;
         this.asOf = asOf;
-        this.futureExpiries = futureExpiries;
-        this.frontExpiry = frontExpiry;
-        this.backExpiry = backExpiry;
-        this.futureStrips = futureStrips;
-        this.frontStrip = frontStrip;
-        this.backStrip = backStrip;
-        this.futures = futures;
-        this.frontForward = frontForward;
-        this.backForward = backForward;
+        this.volStrip = volStrip;
+        this.indexFrontStrip = indexFrontStrip;
+        this.indexBackStrip = indexBackStrip;
+        this.volFuture = volFuture;
     }
 
-    double indexMidStrike() {
-        return 0.0;
+    Basis calculateBasis() {
+        return new Basis(0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
     }
-
-    double vixBidStrike() {
-        return 0.0;
-    }
-
-    double vixAskStrike() {
-        return 0.0;
-    }
-
 
     @Override public boolean equals(Object other) {
         if (!(other instanceof Replication)) return false;
         Replication otherReplication = (Replication) other;
-        return (frontExpiry.equals(otherReplication.frontExpiry) &&
-                backExpiry.equals(otherReplication.backExpiry));
+        return (specification.indexFrontExpiry.equals(otherReplication.specification.indexFrontExpiry) &&
+                specification.indexBackExpiry.equals(otherReplication.specification.indexBackExpiry));
     }
 
     @Override public int hashCode() {
-        return frontExpiry.hashCode() * backExpiry.hashCode();
+        return specification.indexFrontExpiry.hashCode() * specification.indexBackExpiry.hashCode();
     }
 
     @Override public int compareTo(Replication other) {
-        if (frontExpiry.isBefore(other.frontExpiry)) {
+        if (specification.indexFrontExpiry.isBefore(other.specification.indexFrontExpiry)) {
             return -1;
-        } else if (frontExpiry.equals(other.frontExpiry)) {
-            if (backExpiry.isBefore(other.backExpiry)) {
+        } else if (specification.indexFrontExpiry.equals(other.specification.indexFrontExpiry)) {
+            if (specification.indexBackExpiry.isBefore(other.specification.indexBackExpiry)) {
                 return -1;
-            } else if (backExpiry.equals(other.backExpiry)) {
+            } else if (specification.indexBackExpiry.equals(other.specification.indexBackExpiry)) {
                 return 0;
             } else {
                 return 1;
@@ -80,4 +56,43 @@ public class Replication implements Comparable<Replication> {
             return 1;
         }
     }
+
+    static class Specification {
+        final Utils.Underlier indexUnderlier;
+        final Utils.Underlier volUnderlier;
+        final ZonedDateTime volExpiry;
+        final ZonedDateTime indexFrontExpiry;
+        final ZonedDateTime indexBackExpiry;
+
+        Specification(Utils.Underlier indexUnderlier, Utils.Underlier volUnderlier, ZonedDateTime indexFrontExpiry,
+                      ZonedDateTime indexBackExpiry, ZonedDateTime volExpiry) {
+            this.indexUnderlier = indexUnderlier;
+            this.volUnderlier = volUnderlier;
+            this.volExpiry = volExpiry;
+            this.indexFrontExpiry = indexFrontExpiry;
+            this.indexBackExpiry = indexBackExpiry;
+        }
+    }
+
+    static class Basis {
+        final double indexMid;
+        final double volMid;
+        final double basis;
+        final double indexLowStrike;
+        final double indexHighStrike;
+        final double volLowStrike;
+        final double volHighStrike;
+
+        Basis(double indexMid, double volMid, double indexLowStrike, double indexHighStrike, double volLowStrike,
+              double volHighStrike) {
+            this.indexMid = indexMid;
+            this.volMid = volMid;
+            this.basis = volMid - indexMid;
+            this.indexLowStrike = indexLowStrike;
+            this.indexHighStrike = indexHighStrike;
+            this.volLowStrike = volLowStrike;
+            this.volHighStrike = volHighStrike;
+        }
+    }
+
 }

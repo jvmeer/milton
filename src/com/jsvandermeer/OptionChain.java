@@ -14,45 +14,25 @@ import static com.jsvandermeer.Utils.zonedDateTimeToString;
  */
 
 class OptionChain extends Chain {
-    Map<ZonedDateTime, Strip> strips;
+    private final Map<ZonedDateTime, Strip> strips;
 
-    OptionChain(String underlier, ZonedDateTime asOf, Connection connection) {
-        super(underlier, asOf, connection, "options");
-        strips = new HashMap<>();
+    OptionChain(Utils.Underlier underlier, ZonedDateTime asOf) {
+        super(underlier, asOf);
+        expiries = dataInterface.retrieveExpiries(underlier, asOf, "options");
+        strips = dataInterface.retrieveStrips(underlier, asOf);
+    }
 
-        try {
-            for (ZonedDateTime expiry : expiries) {
-                String stripQuery = "select strike, is_call, bid_price, ask_price, bid_size, ask_size from options " +
-                        "where underlier=" + underlier + " and as_of=" + zonedDateTimeToString(asOf) + " and expiry=" +
-                        zonedDateTimeToString(expiry);
-                ResultSet stripSet = connection.createStatement().executeQuery(stripQuery);
-                Strip strip = new Strip(expiry, stripSet);
-                strips.put(expiry, strip);
-            }
-        } catch (SQLException exception) {
-            exception.printStackTrace();
-        }
+    Strip getStrip(ZonedDateTime expiry) {
+        return strips.get(expiry);
     }
 
     public static class Strip {
         ZonedDateTime expiry;
         Map<Option, Market> options;
 
-        Strip(ZonedDateTime expiry, ResultSet resultSet) {
+        Strip(ZonedDateTime expiry, Map<Option, Market> options) {
             this.expiry = expiry;
-            options = new HashMap<>();
-            try {
-                while (resultSet.next()) {
-                    Option option = new Option(resultSet.getDouble("strike"),
-                            resultSet.getBoolean("is_call"));
-                    Market market = new Market(resultSet.getDouble("bid_price"),
-                            resultSet.getDouble("ask_price"), resultSet.getInt("bid_size"),
-                            resultSet.getInt("ask_size"));
-                    options.put(option, market);
-                }
-            } catch (SQLException exception) {
-                exception.printStackTrace();
-            }
+            this.options = options;
         }
     }
 

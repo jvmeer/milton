@@ -67,7 +67,9 @@ public class BloombergInterface {
                                                       Utils.Underlier underlier) {
         Set<DataInterface.FutureLine> futureLines = new HashSet<>();
         Request request;
-        for (LocalDate dateCursor = startDate; dateCursor.isBefore(endDate); dateCursor = dateCursor.plusDays(1)) {
+        for (LocalDate dateCursor = startDate; dateCursor.isBefore(endDate);
+             dateCursor = Utils.nextBusinessDay(dateCursor)) {
+            System.out.println(dateCursor.toString());
             request = createFutureChainRequest(underlier, dateCursor);
             Set<String> bloombergTickers = processChainResponse(request);
             request = createFuturePropertyRequest(bloombergTickers);
@@ -222,21 +224,43 @@ public class BloombergInterface {
                             Message message = iter.next();
                             Element responseData = message.getElement("securityData");
                             String bloombergTicker = responseData.getElement("security").getValueAsString();
-                            Element fieldData = responseData.getElement("fieldData").getValueAsElement();
-                            double bidPrice;
+                            Double bidPrice = null;
+                            Double askPrice = null;
+                            Long bidSize = null;
+                            Long askSize = null;
+
                             try {
-                                bidPrice = fieldData.getElement("PX_BID").getValueAsFloat64();
-                            } catch (NotFoundException exception) {
-                                bidPrice = 0;
+                                Element fieldData = responseData.getElement("fieldData").getValueAsElement();
+                                try {
+                                    bidPrice = fieldData.getElement("PX_BID").getValueAsFloat64();
+                                } catch (NotFoundException exception) {
+                                    bidPrice = 0.0;
+                                }
+                                try {
+                                    askPrice = fieldData.getElement("PX_ASK").getValueAsFloat64();
+                                } catch (NotFoundException exception) {
+                                    askPrice = bidPrice;
+                                }
+                                try {
+                                    bidSize = fieldData.getElement("BID_SIZE").getValueAsInt64();
+                                } catch (NotFoundException exception) {
+                                    bidSize = null;
+                                }
+                                try {
+                                    askSize = fieldData.getElement("ASK_SIZE").getValueAsInt64();
+                                } catch (NotFoundException exception) {
+                                    askSize = null;
+                                }
+
+                            } catch (IndexOutOfBoundsException exception) {
+                                bidPrice = null;
+                                askPrice = null;
+                                bidSize = null;
+                                askSize = null;
+                            } finally {
+                                Chain.Market market = new Chain.Market(bidPrice, askPrice, bidSize, askSize);
+                                markets.put(bloombergTicker, market);
                             }
-                            double askPrice;
-                            try {
-                                askPrice = fieldData.getElement("PX_ASK").getValueAsFloat64();
-                            } catch (NotFoundException exception) {
-                                askPrice = bidPrice;
-                            }
-                            Chain.Market market = new Chain.Market(bidPrice, askPrice, null, null);
-                            markets.put(bloombergTicker, market);
                         }
                     default:
                         break;

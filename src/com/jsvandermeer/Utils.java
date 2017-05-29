@@ -1,8 +1,12 @@
 package com.jsvandermeer;
 
+import javax.xml.crypto.Data;
+import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.Calendar;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -57,7 +61,7 @@ public class Utils {
 
     static final String DATABASE_PATH = "jdbc:sqlite:C:\\Users\\Jacob\\Dropbox\\Code\\milton\\green.db";
 
-
+    static final int REPLICATION_DAY_TOLERANCE = 6;
     static final int VIX_DAYS = 30;
 
     static String zonedDateTimeToString(ZonedDateTime date) {
@@ -98,5 +102,20 @@ public class Utils {
         return stringToZonedDateTime(monthDayYear[2] + monthDayYear[0] + monthDayYear[1]);
     }
 
+    static LocalDate nextBusinessDay(LocalDate date) {
+        LocalDate result = date;
+        while (true) {
+            result = result.plusDays(1);
+            if (isBusinessDay(result)) break;
+        }
+        return result;
+    }
+
+    static boolean isBusinessDay(LocalDate date) {
+        DataInterface dataInterface = DataInterface.getInstance();
+        Collection<LocalDate> holidays = dataInterface.retrieveHolidays();
+        return !(date.getDayOfWeek() == DayOfWeek.SATURDAY || date.getDayOfWeek() == DayOfWeek.SUNDAY ||
+                holidays.contains(date));
+    }
 
 }

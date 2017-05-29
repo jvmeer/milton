@@ -2,9 +2,8 @@ package com.jsvandermeer;
 
 import java.sql.*;
 import java.time.LocalDate;
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.List;
+import java.time.ZonedDateTime;
+import java.util.*;
 
 /**
  * Created by Jacob on 4/14/2017.
@@ -30,8 +29,8 @@ public class DataInterface {
     }
 
     void insertHolidays(Collection<LocalDate> holidays) {
-        String tableStatement = "CREATE TABLE IF NOT EXISTS holidays (date TEXT NOT NULL PRIMARY KEY)";
-        String insertStatement = "INSERT INTO holidays(date) VALUES(?)";
+        String tableStatement = "CREATE TABLE IF NOT EXISTS holidays (holiday TEXT NOT NULL PRIMARY KEY)";
+        String insertStatement = "INSERT OR REPLACE INTO holidays(holiday) VALUES(?)";
         try {
             connection.createStatement().executeUpdate(tableStatement);
             for (LocalDate holiday : holidays) {
@@ -45,18 +44,46 @@ public class DataInterface {
         }
     }
 
-    Collection<LocalDate> retrieveHolidays() {
-        Collection<LocalDate> holidays = new HashSet<>();
-        String selectStatement = "SELECT date FROM holidays";
+    void insertFutures(Collection<FutureLine> futureLines) {
+        String tableStatement = "CREATE TABLE IF NOT EXISTS futures (underlier TEXT NOT NULL, expiry TEXT NOT NULL, " +
+                "as_of TEXT NOT NULL, bid_price REAL, ask_price REAL, bid_size INTEGER, ask_size INTEGER, " +
+                "PRIMARY KEY (underlier, expiry, as_of))";
+        String insertStatement = "INSERT OR REPLACE INTO futures(underlier, expiry, as_of, bid_price, ask_price, bid_size, " +
+                "ask_size) VALUES(?, ?, ?, ?, ?, ?, ?)";
         try {
-            ResultSet resultSet = connection.createStatement().executeQuery(selectStatement);
-            while (resultSet.next()) {
-                holidays.add(Utils.stringToLocalDate(resultSet.getString("date")));
+            connection.createStatement().executeUpdate(tableStatement);
+            for (FutureLine futureLine : futureLines) {
+                PreparedStatement preparedStatement = connection.prepareStatement(insertStatement);
+                preparedStatement.setString(1, futureLine.underlier);
+                preparedStatement.setString(2, futureLine.expiry);
+                preparedStatement.setString(3, futureLine.asOf);
+                if (futureLine.bidPrice == null) {
+                    preparedStatement.setNull(4, Types.REAL);
+                } else {
+                    preparedStatement.setDouble(4, futureLine.bidPrice);
+                }
+                if (futureLine.askPrice == null) {
+                    preparedStatement.setNull(5, Types.REAL);
+                } else {
+                    preparedStatement.setDouble(5, futureLine.askPrice);
+                }
+                if (futureLine.bidSize == null) {
+                    preparedStatement.setNull(6, Types.INTEGER);
+                } else {
+                    preparedStatement.setLong(6, futureLine.bidSize);
+                }
+                if (futureLine.askSize == null) {
+                    preparedStatement.setNull(7, Types.INTEGER);
+                } else {
+                    preparedStatement.setLong(7, futureLine.askSize);
+                }
+
+                preparedStatement.executeUpdate();
             }
+            connection.commit();
         } catch (SQLException exception) {
             exception.printStackTrace();
         }
-        return holidays;
     }
 
     void insertOptions(Collection<OptionLine> optionLines) {
@@ -64,7 +91,7 @@ public class DataInterface {
                 "strike REAL NOT NULL, is_call BOOLEAN NOT NULL, as_of TEXT NOT NULL, bid_price REAL, " +
                 "ask_price REAL, bid_size INTEGER, ask_size INTEGER, PRIMARY KEY (underlier, expiry, strike, " +
                 "is_call, as_of))";
-        String insertStatement = "INSERT INTO options(underlier, expiry, strike, is_call, as_of, " +
+        String insertStatement = "INSERT OR REPLACE INTO options(underlier, expiry, strike, is_call, as_of, " +
                 "bid_price, ask_price, bid_size, ask_size) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)";
         try {
             connection.createStatement().executeUpdate(tableStatement);
@@ -88,12 +115,12 @@ public class DataInterface {
                 if (optionLine.bidSize == null) {
                     preparedStatement.setNull(8, Types.INTEGER);
                 } else {
-                    preparedStatement.setInt(8, optionLine.bidSize);
+                    preparedStatement.setLong(8, optionLine.bidSize);
                 }
                 if (optionLine.askSize == null) {
                     preparedStatement.setNull(9, Types.INTEGER);
                 } else {
-                    preparedStatement.setInt(9, optionLine.askSize);
+                    preparedStatement.setLong(9, optionLine.askSize);
                 }
 
                 preparedStatement.executeUpdate();
@@ -104,46 +131,106 @@ public class DataInterface {
         }
     }
 
-    void insertFutures(Collection<FutureLine> futureLines) {
-        String tableStatement = "CREATE TABLE IF NOT EXISTS futures (underlier TEXT NOT NULL, expiry TEXT NOT NULL, " +
-                "as_of TEXT NOT NULL, bid_price REAL, ask_price REAL, bid_size INTEGER, ask_size INTEGER, " +
-                "PRIMARY KEY (underlier, expiry, as_of))";
-        String insertStatement = "INSERT INTO futures(underlier, expiry, as_of, bid_price, ask_price, bid_size, " +
-                "ask_size) VALUES(?, ?, ?, ?, ?, ?, ?)";
+    Collection<LocalDate> retrieveHolidays() {
+        Collection<LocalDate> holidays = new HashSet<>();
+        String holidaysQuery = "SELECT holiday FROM holidays";
         try {
-            connection.createStatement().executeUpdate(tableStatement);
-            for (FutureLine futureLine : futureLines) {
-                PreparedStatement preparedStatement = connection.prepareStatement(insertStatement);
-                preparedStatement.setString(1, futureLine.underlier);
-                preparedStatement.setString(2, futureLine.expiry);
-                preparedStatement.setString(3, futureLine.asOf);
-                if (futureLine.bidPrice == null) {
-                    preparedStatement.setNull(4, Types.REAL);
-                } else {
-                    preparedStatement.setDouble(4, futureLine.bidPrice);
-                }
-                if (futureLine.askPrice == null) {
-                    preparedStatement.setNull(5, Types.REAL);
-                } else {
-                    preparedStatement.setDouble(5, futureLine.askPrice);
-                }
-                if (futureLine.bidSize == null) {
-                    preparedStatement.setNull(6, Types.INTEGER);
-                } else {
-                    preparedStatement.setInt(6, futureLine.bidSize);
-                }
-                if (futureLine.askSize == null) {
-                    preparedStatement.setNull(7, Types.INTEGER);
-                } else {
-                    preparedStatement.setInt(7, futureLine.askSize);
-                }
-
-                preparedStatement.executeUpdate();
+            ResultSet resultSet = connection.createStatement().executeQuery(holidaysQuery);
+            while (resultSet.next()) {
+                holidays.add(Utils.stringToLocalDate(resultSet.getString("holiday")));
             }
-            connection.commit();
         } catch (SQLException exception) {
             exception.printStackTrace();
         }
+        return holidays;
+    }
+
+    Set<ZonedDateTime> retrieveAsOfs(Utils.Underlier underlier, ZonedDateTime startDate, ZonedDateTime endDate,
+                                     String table) {
+        Set<ZonedDateTime> asOfs = new HashSet<>();
+        String asOfsQuery = "SELECT DISTINCT as_of FROM " + table + " WHERE underlier=? AND as_of>=? AND as_of<?";
+        try {
+            PreparedStatement preparedStatement = connection.prepareStatement(asOfsQuery);
+            preparedStatement.setString(1, underlier.ticker);
+            preparedStatement.setString(2, Utils.zonedDateTimeToString(startDate));
+            preparedStatement.setString(3, Utils.zonedDateTimeToString(endDate));
+            ResultSet resultSet = preparedStatement.executeQuery();
+            while (resultSet.next()) {
+                asOfs.add(Utils.stringToZonedDateTime(resultSet.getString("as_of")));
+            }
+        } catch (SQLException exception) {
+            exception.printStackTrace();
+        }
+        return asOfs;
+    }
+
+    NavigableSet<ZonedDateTime> retrieveExpiries(Utils.Underlier underlier, ZonedDateTime asOf, String table) {
+        NavigableSet<ZonedDateTime> expiries = new TreeSet<>();
+        String expiriesQuery = "SELECT expiry FROM " + table + " WHERE underlier=? AND as_of=?";
+        try {
+            PreparedStatement preparedStatement = connection.prepareStatement(expiriesQuery);
+            preparedStatement.setString(1, underlier.ticker);
+            preparedStatement.setString(2, Utils.zonedDateTimeToString(asOf));
+            ResultSet resultSet = preparedStatement.executeQuery();
+            while (resultSet.next()) {
+                expiries.add(Utils.stringToZonedDateTime(resultSet.getString("expiry")));
+            }
+        } catch (SQLException exception) {
+            exception.printStackTrace();
+        }
+        return expiries;
+    }
+
+    Map<ZonedDateTime, Chain.Market> retrieveFutures(Utils.Underlier underlier, ZonedDateTime asOf) {
+        Map<ZonedDateTime, Chain.Market> futures = new HashMap<>();
+        String futuresQuery = "SELECT expiry, bid_price, ask_price, bid_size, ask_size FROM futures WHERE " +
+                "underlier=? AND as_of=?";
+        try {
+            PreparedStatement preparedStatement = connection.prepareStatement(futuresQuery);
+            preparedStatement.setString(1, underlier.ticker);
+            preparedStatement.setString(2, Utils.zonedDateTimeToString(asOf));
+            ResultSet resultSet = preparedStatement.executeQuery();
+            while (resultSet.next()) {
+                ZonedDateTime expiry = Utils.stringToZonedDateTime(resultSet.getString("expiry"));
+                Chain.Market market = new Chain.Market(resultSet.getDouble("bid_price"),
+                        resultSet.getDouble("ask_price"), resultSet.getLong("bid_size"),
+                        resultSet.getLong("ask_size"));
+                futures.put(expiry, market);
+            }
+        } catch (SQLException exception) {
+            exception.printStackTrace();
+        }
+        return futures;
+    }
+
+    Map<ZonedDateTime, OptionChain.Strip> retrieveStrips(Utils.Underlier underlier, ZonedDateTime asOf) {
+        Map<ZonedDateTime, OptionChain.Strip> strips = new HashMap<>();
+        Set<ZonedDateTime> expiries = retrieveExpiries(underlier, asOf, "options");
+        for (ZonedDateTime expiry : expiries) {
+            Map<OptionChain.Option, Chain.Market> options = new HashMap<>();
+            String stripsQuery = "SELECT strike, is_call, bid_price, ask_price, bid_size, ask_size FROM options " +
+                    "WHERE expiry=? AND underlier=? AND as_of=?";
+            try {
+                PreparedStatement preparedStatement = connection.prepareStatement(stripsQuery);
+                preparedStatement.setString(1, Utils.zonedDateTimeToString(expiry));
+                preparedStatement.setString(2, underlier.ticker);
+                preparedStatement.setString(3, Utils.zonedDateTimeToString(asOf));
+                ResultSet resultSet = preparedStatement.executeQuery();
+                while (resultSet.next()) {
+                    OptionChain.Option option = new OptionChain.Option(resultSet.getDouble("strike"),
+                            resultSet.getBoolean("is_call"));
+                    Chain.Market market = new Chain.Market(resultSet.getDouble("bid_price"),
+                            resultSet.getDouble("ask_price"), resultSet.getLong("bid_size"),
+                            resultSet.getLong("ask_size"));
+                    options.put(option, market);
+                }
+            } catch (SQLException exception) {
+                exception.printStackTrace();
+            }
+            OptionChain.Strip strip = new OptionChain.Strip(expiry, options);
+            strips.put(expiry, strip);
+        }
+        return strips;
     }
 
     static abstract class Line {
@@ -152,11 +239,11 @@ public class DataInterface {
         final String asOf;
         final Double bidPrice;
         final Double askPrice;
-        final Integer bidSize;
-        final Integer askSize;
+        final Long bidSize;
+        final Long askSize;
 
-        Line(String underlier, String expiry, String asOf, Double bidPrice, Double askPrice, Integer bidSize,
-             Integer askSize) {
+        Line(String underlier, String expiry, String asOf, Double bidPrice, Double askPrice, Long bidSize,
+             Long askSize) {
             this.underlier = underlier;
             this.expiry = expiry;
             this.asOf = asOf;
@@ -172,7 +259,7 @@ public class DataInterface {
         final boolean isCall;
 
         OptionLine (String ticker, String expiry, double strike, boolean isCall, String asOf,
-                           Double bidPrice, Double askPrice, Integer bidSize, Integer askSize) {
+                           Double bidPrice, Double askPrice, Long bidSize, Long askSize) {
             super(ticker, expiry, asOf, bidPrice, askPrice, bidSize, askSize);
             this.strike = strike;
             this.isCall = isCall;
@@ -185,8 +272,8 @@ public class DataInterface {
     }
 
     static class FutureLine extends Line {
-        FutureLine(String ticker, String expiry, String asOf, Double bidPrice, Double askPrice, Integer bidSize,
-                   Integer askSize) {
+        FutureLine(String ticker, String expiry, String asOf, Double bidPrice, Double askPrice, Long bidSize,
+                   Long askSize) {
             super(ticker, expiry, asOf, bidPrice, askPrice, bidSize, askSize);
         }
 

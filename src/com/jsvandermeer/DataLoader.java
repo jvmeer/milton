@@ -378,8 +378,8 @@ public class DataLoader {
                                 "[" + underlier.timeZoneId + "]";
                         double bidPrice = Double.parseDouble(cells[LiveVolColumn.BID_EOD.columnNumber]);
                         double askPrice = Double.parseDouble(cells[LiveVolColumn.ASK_EOD.columnNumber]);
-                        int bidSize = Integer.parseInt(cells[LiveVolColumn.BID_SIZE_EOD.columnNumber]);
-                        int askSize = Integer.parseInt(cells[LiveVolColumn.ASK_SIZE_EOD.columnNumber]);
+                        long bidSize = Integer.parseInt(cells[LiveVolColumn.BID_SIZE_EOD.columnNumber]);
+                        long askSize = Integer.parseInt(cells[LiveVolColumn.ASK_SIZE_EOD.columnNumber]);
                         DataInterface.OptionLine optionLine = new DataInterface.OptionLine(ticker, expiry, strike,
                                 isCall, asOf, bidPrice, askPrice, bidSize, askSize);
                         optionLines.add(optionLine);

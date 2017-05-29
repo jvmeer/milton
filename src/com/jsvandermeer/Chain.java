@@ -14,25 +14,17 @@ import static com.jsvandermeer.Utils.zonedDateTimeToString;
  * Created by Jacob on 4/6/2017.
  */
 abstract class Chain {
-    String underlier;
-    ZonedDateTime asOf;
-    NavigableSet<ZonedDateTime> expiries;
+    private final Utils.Underlier underlier;
+    private final ZonedDateTime asOf;
+    protected NavigableSet<ZonedDateTime> expiries;
+    protected final DataInterface dataInterface;
 
 
-    Chain(String underlier, ZonedDateTime asOf, Connection connection, String table) {
+    Chain(Utils.Underlier underlier, ZonedDateTime asOf) {
         this.underlier = underlier;
         this.asOf = asOf;
         expiries = new TreeSet<>();
-        try {
-            String expiriesQuery = "select distinct expiry from (select * from " + table + " where underlier=" +
-                    underlier + " and as_of=" + zonedDateTimeToString(asOf);
-            ResultSet expiriesSet = connection.createStatement().executeQuery(expiriesQuery);
-            while (expiriesSet.next()) {
-                expiries.add(Utils.stringToZonedDateTime(expiriesSet.getString("expiry")));
-            }
-        } catch (SQLException exception) {
-            exception.printStackTrace();
-        }
+        dataInterface = DataInterface.getInstance();
     }
 
     NavigableSet<ZonedDateTime> getExpiries() {
@@ -42,10 +34,10 @@ abstract class Chain {
     static class Market {
         final Double bidPrice;
         final Double askPrice;
-        final Integer bidSize;
-        final Integer askSize;
+        final Long bidSize;
+        final Long askSize;
 
-        Market(Double bidPrice, Double askPrice, Integer bidSize, Integer askSize) {
+        Market(Double bidPrice, Double askPrice, Long bidSize, Long askSize) {
             this.bidPrice = bidPrice;
             this.askPrice = askPrice;
             this.bidSize = bidSize;
