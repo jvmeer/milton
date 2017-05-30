@@ -1,8 +1,10 @@
 package com.jsvandermeer;
 
+import java.math.BigDecimal;
 import java.time.ZonedDateTime;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.SortedMap;
 import java.util.SortedSet;
 
 /**
@@ -27,8 +29,33 @@ public class Replication implements Comparable<Replication> {
     }
 
     Basis calculateBasis() {
-        return new Basis(0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
+
+        return new Basis(calculateForward(indexBackStrip),
+                0.0, 0.0, 0.0, 0.0, 0.0);
     }
+
+    private double calculateForward(OptionChain.Strip strip) {
+        double minDifference = strip.strikeRange();
+        double premiumDifferenceOfMinDifference = minDifference;
+        BigDecimal strikeOfMinDifference = null;
+        for (BigDecimal strike : strip.getStrikes()) {
+            double premiumDifferenceAtStrike = strip.getPremiumDifferenceAtStrike(strike);
+            if (premiumDifferenceAtStrike < minDifference) {
+                minDifference = Math.abs(premiumDifferenceAtStrike);
+                premiumDifferenceOfMinDifference = premiumDifferenceAtStrike;
+                strikeOfMinDifference = strike;
+            } else {
+                break;
+            }
+        }
+
+        double calendarTimeToExpiry = Utils.calendarPeriod(asOf, strip.getExpiry());
+
+        return strikeOfMinDifference.doubleValue() + Math.exp(Utils.FORWARD_RATE * calendarTimeToExpiry) *
+                premiumDifferenceOfMinDifference;
+    }
+
+
 
     @Override public boolean equals(Object other) {
         if (!(other instanceof Replication)) return false;

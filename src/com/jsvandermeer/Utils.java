@@ -5,6 +5,7 @@ import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoUnit;
 import java.util.Calendar;
 import java.util.Collection;
 import java.util.HashMap;
@@ -64,6 +65,14 @@ public class Utils {
     static final int REPLICATION_DAY_TOLERANCE = 6;
     static final int VIX_DAYS = 30;
 
+    static final int STRIKE_SCALE = 4;
+
+    static final double FORWARD_RATE = 0.01;
+    static final double BOX_RATE = 0.01;
+
+    static final double CALENDAR_MINUTES_IN_YEAR = 525600.0;
+    static final double BUSINESS_MINUTES_IN_YEAR = 362880.0;
+
     static String zonedDateTimeToString(ZonedDateTime date) {
         DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern("uuuu'-'MM'-'dd'T'HH':'mm':'ss'['VV']'");
         return date.format(dateTimeFormatter);
@@ -117,5 +126,10 @@ public class Utils {
         return !(date.getDayOfWeek() == DayOfWeek.SATURDAY || date.getDayOfWeek() == DayOfWeek.SUNDAY ||
                 holidays.contains(date));
     }
+
+    static double calendarPeriod(ZonedDateTime startDate, ZonedDateTime endDate) {
+        return ChronoUnit.MINUTES.between(startDate, endDate) / CALENDAR_MINUTES_IN_YEAR;
+    }
+
 
 }

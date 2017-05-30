@@ -1,5 +1,6 @@
 package com.jsvandermeer;
 
+import java.math.BigDecimal;
 import java.sql.*;
 import java.time.LocalDate;
 import java.time.ZonedDateTime;
@@ -207,7 +208,7 @@ public class DataInterface {
         Map<ZonedDateTime, OptionChain.Strip> strips = new HashMap<>();
         Set<ZonedDateTime> expiries = retrieveExpiries(underlier, asOf, "options");
         for (ZonedDateTime expiry : expiries) {
-            Map<OptionChain.Option, Chain.Market> options = new HashMap<>();
+            SortedMap<OptionChain.Option, Chain.Market> options = new TreeMap<>();
             String stripsQuery = "SELECT strike, is_call, bid_price, ask_price, bid_size, ask_size FROM options " +
                     "WHERE expiry=? AND underlier=? AND as_of=?";
             try {
@@ -217,7 +218,9 @@ public class DataInterface {
                 preparedStatement.setString(3, Utils.zonedDateTimeToString(asOf));
                 ResultSet resultSet = preparedStatement.executeQuery();
                 while (resultSet.next()) {
-                    OptionChain.Option option = new OptionChain.Option(resultSet.getDouble("strike"),
+                    BigDecimal strike = new BigDecimal(resultSet.getDouble("strike"));
+                    strike.setScale(Utils.STRIKE_SCALE, BigDecimal.ROUND_HALF_UP);
+                    OptionChain.Option option = new OptionChain.Option(strike,
                             resultSet.getBoolean("is_call"));
                     Chain.Market market = new Chain.Market(resultSet.getDouble("bid_price"),
                             resultSet.getDouble("ask_price"), resultSet.getLong("bid_size"),

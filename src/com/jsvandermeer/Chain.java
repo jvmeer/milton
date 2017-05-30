@@ -44,6 +44,12 @@ abstract class Chain {
             this.askSize = askSize;
         }
 
+
+        Double calculateMid() {
+            if (bidPrice == null || askPrice == null) return null;
+            return (bidPrice + askPrice) / 2.0;
+        }
+
         @Override
         public String toString() {
             return "(" + bidPrice + " " + bidSize + "," + askPrice + " " + askSize + ")";
